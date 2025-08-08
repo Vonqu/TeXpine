@@ -799,7 +799,7 @@ class DataManager:
         return mapped_values
 
     def add_raw_data_point(self, values):
-        """记录原始（未滤波/增强）数据点，仅做计数或后续扩展保存。"""
+        """记录原始（未滤波）数据点，仅做计数或后续扩展保存。"""
         try:
             with self.data_lock:
                 self.raw_data_points += 1
@@ -808,7 +808,7 @@ class DataManager:
             print(f"✗ 记录原始数据点失败: {e}")
 
     def add_processed_data_point(self, values):
-        """记录已处理（滤波+增强）数据点，作为与 add_data_point 分离的标记接口。"""
+        """记录已处理（滤波）数据点，作为与 add_data_point 分离的标记接口。"""
         try:
             with self.data_lock:
                 self.processed_data_points += 1

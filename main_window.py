@@ -2424,13 +2424,12 @@ class SensorMonitorMainWindow(QMainWindow):
             traceback.print_exc()
 
     def process_sensor_data(self, data):
-        """处理接收到的传感器数据（集成滤波器和数据增强）"""
+        """处理接收到的传感器数据（集成滤波器）"""
         try:
             self.data_count += 1
             filter_params = self.control_panel.get_filter_params()
-            enhancement_params = self.control_panel.get_enhancement_params()
             
-            # 第一步：滤波处理
+            # 滤波处理
             filter_enabled = filter_params['enabled']
             filter_method = filter_params['method']
             filter_params_dict = filter_params['params']

@@ -79,7 +79,7 @@ class EventRecorder(QObject):
         
     def record_event(self, event_name, stage=None, additional_data=None):
         """
-        记录事件数据（增强版）
+        记录事件数据
         
         Args:
             event_name: 事件名称
