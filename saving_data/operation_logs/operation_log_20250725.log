@@ -1,0 +1,132 @@
+2025-07-25 20:43:28.876 [INFO] === 新的操作记录会话开始 ===
+2025-07-25 20:43:43.665 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 20:43:43.665", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-07-25 20:48:00.555 [INFO] === 新的操作记录会话开始 ===
+2025-07-25 20:48:07.468 [ERROR] {"error_type": "init", "message": "初始化事件文件路径失败: 'ControlPanel' object has no attribute 'set_events_save_path'", "timestamp": "2025-07-25 20:48:07.468"}
+2025-07-25 20:48:12.460 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 20:48:12.460", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-07-25 20:49:26.083 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 20:49:26.083", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 8674, "raw_data_count": 8674, "events_count": 0}}}
+2025-07-25 20:51:02.307 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 20:51:02.307", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-07-25 20:51:27.977 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 20:51:27.977", "details": {"statistics": {"display_data_count": 2683, "total_data_count": 2683, "raw_data_count": 11360, "events_count": 2}}}
+2025-07-25 20:51:35.332 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 20:51:35.331", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 20:51:35.335 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 20:51:35.335", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 20:51:40.409 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 20:51:40.409", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 20:52:10.528 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 20:52:10.528", "details": {"statistics": {"display_data_count": 3029, "total_data_count": 3029, "raw_data_count": 14391, "events_count": 2}}}
+2025-07-25 20:52:18.957 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 20:52:18.957", "details": {"from": "patient", "to": "doctor"}}
+2025-07-25 20:52:18.958 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 20:52:18.958", "details": {"from": "doctor", "to": "doctor"}}
+2025-07-25 20:52:31.266 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 20:52:31.266", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-07-25 20:53:14.418 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 20:53:14.418", "details": {"statistics": {"display_data_count": 4955, "total_data_count": 4955, "raw_data_count": 19348, "events_count": 6}}}
+2025-07-25 20:53:20.341 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 20:53:20.341", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 20:53:20.348 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 20:53:20.348", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 20:53:26.041 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 20:53:26.041", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 20:55:03.459 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 20:55:03.459", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 11828, "raw_data_count": 31180, "events_count": 6}}}
+2025-07-25 20:58:52.137 [INFO] === 新的操作记录会话开始 ===
+2025-07-25 20:59:16.662 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 20:59:16.662", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-07-25 21:00:18.828 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 21:00:18.828", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 7102, "raw_data_count": 7102, "events_count": 8}}}
+2025-07-25 21:00:35.782 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:00:35.782", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 21:00:35.785 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:00:35.785", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 21:00:39.095 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 21:00:39.095", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 21:02:11.735 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 21:02:11.735", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 11286, "raw_data_count": 18388, "events_count": 8}}}
+2025-07-25 21:02:26.422 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 21:02:26.422", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 21:02:40.335 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 21:02:40.335", "details": {"statistics": {"display_data_count": 1500, "total_data_count": 1500, "raw_data_count": 19888, "events_count": 8}}}
+2025-07-25 21:06:00.746 [INFO] === 新的操作记录会话开始 ===
+2025-07-25 21:07:13.858 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:07:13.858", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 21:07:13.868 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:07:13.868", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 21:07:16.449 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 21:07:16.449", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 21:07:42.381 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:07:42.381", "details": {"from": "patient", "to": "doctor"}}
+2025-07-25 21:07:42.381 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:07:42.381", "details": {"from": "doctor", "to": "doctor"}}
+2025-07-25 21:07:57.525 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:07:57.525", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 21:07:57.539 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:07:57.539", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 21:09:01.993 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 21:09:01.993", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 12690, "raw_data_count": 12690, "events_count": 8}}}
+2025-07-25 21:10:59.244 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:10:59.244", "details": {"from": "patient", "to": "doctor"}}
+2025-07-25 21:10:59.248 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:10:59.248", "details": {"from": "doctor", "to": "doctor"}}
+2025-07-25 21:11:01.730 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 21:11:01.730", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-07-25 21:14:21.469 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 21:14:21.469", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 20778, "raw_data_count": 33471, "events_count": 2}}}
+2025-07-25 21:35:41.408 [INFO] === 新的操作记录会话开始 ===
+2025-07-25 21:36:03.112 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 21:36:03.112", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-07-25 21:37:15.696 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 21:37:15.696", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 8504, "raw_data_count": 8504, "events_count": 11}}}
+2025-07-25 21:37:23.197 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:37:23.197", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 21:37:23.204 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:37:23.204", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 21:37:25.863 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 21:37:25.863", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 21:37:40.003 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 21:37:40.003", "details": {"statistics": {"display_data_count": 1558, "total_data_count": 1558, "raw_data_count": 10062, "events_count": 11}}}
+2025-07-25 21:41:17.540 [INFO] === 新的操作记录会话开始 ===
+2025-07-25 21:41:41.007 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:41:41.007", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 21:41:41.015 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:41:41.015", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 21:41:45.470 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:41:45.470", "details": {"from": "patient", "to": "doctor"}}
+2025-07-25 21:41:45.470 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:41:45.470", "details": {"from": "doctor", "to": "doctor"}}
+2025-07-25 21:42:07.910 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 21:42:07.910", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-07-25 21:43:07.407 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 21:43:07.407", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 7119, "raw_data_count": 7119, "events_count": 10}}}
+2025-07-25 21:43:15.481 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:43:15.481", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 21:43:15.490 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:43:15.490", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 21:43:18.753 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 21:43:18.753", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 21:46:08.985 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 21:46:08.985", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 20898, "raw_data_count": 28019, "events_count": 10}}}
+2025-07-25 21:46:10.819 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 21:46:10.819", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 21:46:28.844 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 21:46:28.840", "details": {"statistics": {"display_data_count": 2062, "total_data_count": 2062, "raw_data_count": 30081, "events_count": 10}}}
+2025-07-25 21:50:56.687 [INFO] === 新的操作记录会话开始 ===
+2025-07-25 21:51:55.153 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:51:55.153", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 21:51:55.154 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 21:51:55.154", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 21:52:34.318 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 21:52:34.318", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 21:55:11.720 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 21:55:11.720", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 19209, "raw_data_count": 19209, "events_count": 10}}}
+2025-07-25 21:55:17.040 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 21:55:17.040", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 22:07:06.263 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 22:07:06.263", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 87536, "raw_data_count": 106745, "events_count": 10}}}
+2025-07-25 22:07:14.576 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:07:14.576", "details": {"from": "patient", "to": "doctor"}}
+2025-07-25 22:07:14.585 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:07:14.585", "details": {"from": "doctor", "to": "doctor"}}
+2025-07-25 22:07:20.426 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 22:07:20.426", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-07-25 22:15:24.812 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 22:15:24.812", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 59385, "raw_data_count": 166130, "events_count": 26}}}
+2025-07-25 22:15:34.711 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:15:34.711", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 22:15:34.725 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:15:34.725", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 22:15:39.066 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 22:15:39.066", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 22:17:37.670 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:17:37.670", "details": {"from": "patient", "to": "doctor"}}
+2025-07-25 22:17:37.670 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:17:37.670", "details": {"from": "doctor", "to": "doctor"}}
+2025-07-25 22:21:04.249 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 22:21:04.249", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 40142, "raw_data_count": 206274, "events_count": 5}}}
+2025-07-25 22:21:46.592 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 22:21:46.592", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-07-25 22:32:41.920 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 22:32:41.920", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 80413, "raw_data_count": 286687, "events_count": 13}}}
+2025-07-25 22:32:46.288 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:32:46.288", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 22:32:46.304 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:32:46.304", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 22:32:49.155 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 22:32:49.155", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 22:33:40.072 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 22:33:40.062", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 5727, "raw_data_count": 292415, "events_count": 13}}}
+2025-07-25 22:33:45.611 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:33:45.611", "details": {"from": "patient", "to": "doctor"}}
+2025-07-25 22:33:45.611 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:33:45.611", "details": {"from": "doctor", "to": "doctor"}}
+2025-07-25 22:33:48.509 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 22:33:48.509", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-07-25 22:36:19.422 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 22:36:19.422", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 18224, "raw_data_count": 310640, "events_count": 10}}}
+2025-07-25 22:36:25.327 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:36:25.327", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 22:36:25.332 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:36:25.332", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 22:36:31.612 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 22:36:31.612", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 22:38:04.956 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 22:38:04.956", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 11123, "raw_data_count": 321764, "events_count": 10}}}
+2025-07-25 22:38:09.886 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:38:09.886", "details": {"from": "patient", "to": "doctor"}}
+2025-07-25 22:38:09.888 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:38:09.887", "details": {"from": "doctor", "to": "doctor"}}
+2025-07-25 22:38:31.128 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 22:38:31.128", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-07-25 22:47:49.485 [INFO] === 新的操作记录会话开始 ===
+2025-07-25 22:48:05.312 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:48:05.312", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 22:48:05.326 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 22:48:05.326", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 23:09:18.554 [INFO] === 新的操作记录会话开始 ===
+2025-07-25 23:12:43.148 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 23:12:43.148", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-07-25 23:13:13.702 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 23:13:13.702", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 23:13:13.717 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 23:13:13.717", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 23:14:58.379 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 23:14:58.379", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 16111, "raw_data_count": 16111, "events_count": 10}}}
+2025-07-25 23:15:02.954 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 23:15:02.954", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 23:18:04.255 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 23:18:04.255", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 22152, "raw_data_count": 38270, "events_count": 10}}}
+2025-07-25 23:28:29.649 [INFO] === 新的操作记录会话开始 ===
+2025-07-25 23:28:45.518 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 23:28:45.518", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 23:28:45.520 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 23:28:45.519", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 23:28:53.578 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 23:28:53.578", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 23:33:05.614 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 23:33:05.613", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 31140, "raw_data_count": 31140, "events_count": 10}}}
+2025-07-25 23:33:12.430 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 23:33:12.429", "details": {"from": "patient", "to": "doctor"}}
+2025-07-25 23:33:12.430 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 23:33:12.430", "details": {"from": "doctor", "to": "doctor"}}
+2025-07-25 23:33:14.818 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 23:33:14.818", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-07-25 23:35:26.352 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 23:35:26.352", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 15990, "raw_data_count": 47130, "events_count": 28}}}
+2025-07-25 23:35:35.005 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 23:35:35.005", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 23:35:35.017 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 23:35:35.016", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 23:35:37.521 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 23:35:37.521", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 23:37:06.784 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 23:37:06.784", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 10016, "raw_data_count": 57146, "events_count": 28}}}
+2025-07-25 23:37:09.250 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 23:37:09.250", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 23:37:58.907 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 23:37:58.907", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 5648, "raw_data_count": 62795, "events_count": 28}}}
+2025-07-25 23:38:15.144 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 23:38:15.144", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 23:54:38.139 [INFO] === 新的操作记录会话开始 ===
+2025-07-25 23:55:02.013 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 23:55:02.013", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 23:55:02.024 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 23:55:02.024", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 23:55:04.726 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 23:55:04.726", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-07-25 23:56:56.511 [INFO] === 新的操作记录会话开始 ===
+2025-07-25 23:57:19.042 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 23:57:19.042", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-07-25 23:57:28.435 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 23:57:28.435", "details": {"from": "doctor", "to": "patient"}}
+2025-07-25 23:57:28.458 [INFO] {"operation": "mode_change", "timestamp": "2025-07-25 23:57:28.458", "details": {"from": "patient", "to": "patient"}}
+2025-07-25 23:57:57.900 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-07-25 23:57:57.900", "details": {"statistics": {"display_data_count": 4524, "total_data_count": 4524, "raw_data_count": 4524, "events_count": 28}}}
+2025-07-25 23:58:00.296 [INFO] {"operation": "acquisition_start", "timestamp": "2025-07-25 23:58:00.296", "details": {"source": "serial", "settings": {"port": "COM9", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
