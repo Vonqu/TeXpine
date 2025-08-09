@@ -18,7 +18,7 @@ import os
 from PyQt5.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QLabel, 
                             QTextEdit, QSplitter, QFrame, QGroupBox, 
                             QSlider, QSpinBox, QProgressBar, QPushButton,
-                            QRadioButton, QButtonGroup)
+                            QRadioButton, QButtonGroup, QSizePolicy)
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont
 import csv
@@ -143,32 +143,38 @@ class PatientBlocksTab(QWidget):
         # ====== 新增：脊柱类型和方向配置 ======
         self.spine_type = "C"  # 默认C型
         self.spine_direction = "left"  # 默认左凸
-        self.max_stages = 3  # 根据脊柱类型调整
+        self.max_stages = 5 if self.spine_type=='S' else 4  # 根据脊柱类型调整
         
         # ====== 阶段配置字典 ======
         self.stage_configs = {
             "C": {
-                "max_stages": 3,
-                "stage_descriptions": {
-                    1: "阶段1：骨盆前后旋转调整",
-                    2: "阶段2：脊柱曲率矫正",
-                    3: "阶段3：关节平衡调整"
-                },
+                "max_stages": 4,
+                
+"stage_descriptions": {
+    1: "阶段1：骨盆前后翻转",
+    2: "阶段2：脊柱曲率矫正-单段",
+    3: "阶段3：骨盆左右倾斜",
+    4: "阶段4：肩部左右倾斜"
+}
+,
                 "sub_stages": {
                     3: ['hip', 'shoulder']  # 阶段3有两个子阶段
                 }
             },
-            "S": {
-                "max_stages": 4,
-                "stage_descriptions": {
-                    1: "阶段1：骨盆前后旋转调整",
-                    2: "阶段2：腰椎曲率矫正",
-                    3: "阶段3：胸椎曲率矫正",
-                    4: "阶段4：肩部左右倾斜调整"
-                },
-                "sub_stages": {}  # S型没有子阶段
-            }
-        }
+            
+"S": {
+    "max_stages": 5,
+    "stage_descriptions": {
+        1: "阶段1：骨盆前后翻转",
+        2: "阶段2A：上胸段曲率矫正",
+        3: "阶段2B：腰段曲率矫正",
+        4: "阶段3：骨盆左右倾斜",
+        5: "阶段4：肩部左右倾斜"
+    },
+    "sub_stages": {}
+}
+}
+
         
         # ====== 患者端训练相关属性 ======
         self.current_stage = 1
@@ -230,23 +236,35 @@ class PatientBlocksTab(QWidget):
         group = QGroupBox("脊柱侧弯类型和方向选择")
         layout = QVBoxLayout()
         group.setLayout(layout)
+        from PyQt5.QtGui import QFont
+        _small = QFont(); _small.setPointSize(9)
+        # 紧凑化：缩小边距/间距、限定高度
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(4)
+        group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        group.setMaximumHeight(140)
+        try:
+            group.setStyleSheet('QGroupBox{margin-top:4px;} QGroupBox::title{left:8px;padding:0 4px;font-size:11px;}')
+        except Exception:
+            pass
         
         # 第一行：脊柱类型选择
         type_layout = QHBoxLayout()
-        type_label = QLabel("脊柱类型:")
+        type_label = QLabel("脊柱类型:"); 
+        type_label.setFont(_small)
         type_layout.addWidget(type_label)
         
         # 创建脊柱类型单选按钮组
         self.spine_type_button_group = QButtonGroup()
         
         # C型脊柱侧弯
-        self.c_type_radio = QRadioButton("C型脊柱侧弯")
+        self.c_type_radio = QRadioButton("C型脊柱侧弯"); c_type_radio = QRadioButton("C型脊柱侧弯").split('=')[0] if False else None
         self.c_type_radio.setChecked(True)
         self.c_type_radio.setToolTip("C型脊柱侧弯：3个阶段的训练模式")
         type_layout.addWidget(self.c_type_radio)
         
         # S型脊柱侧弯
-        self.s_type_radio = QRadioButton("S型脊柱侧弯")
+        self.s_type_radio = QRadioButton("S型脊柱侧弯"); s_type_radio = QRadioButton("S型脊柱侧弯").split('=')[0] if False else None
         self.s_type_radio.setToolTip("S型脊柱侧弯：4个阶段的训练模式")
         type_layout.addWidget(self.s_type_radio)
         
@@ -259,20 +277,20 @@ class PatientBlocksTab(QWidget):
         
         # 第二行：侧弯方向选择
         direction_layout = QHBoxLayout()
-        direction_label = QLabel("侧弯方向:")
+        direction_label = QLabel("侧弯方向:"); direction_label.setFont(_small)
         direction_layout.addWidget(direction_label)
         
         # 创建侧弯方向单选按钮组
         self.spine_direction_button_group = QButtonGroup()
         
         # C型方向选择
-        self.c_left_radio = QRadioButton("左凸")
-        self.c_right_radio = QRadioButton("右凸")
+        self.c_left_radio = QRadioButton("左凸"); c_left_radio = QRadioButton("左凸").split('=')[0] if False else None
+        self.c_right_radio = QRadioButton("右凸"); c_right_radio = QRadioButton("右凸").split('=')[0] if False else None
         self.c_left_radio.setChecked(True)
         
         # S型方向选择
-        self.s_lumbar_left_radio = QRadioButton("腰椎左凸胸椎右凸")
-        self.s_lumbar_right_radio = QRadioButton("腰椎右凸胸椎左凸")
+        self.s_lumbar_left_radio = QRadioButton("腰椎左凸胸椎右凸"); s_lumbar_left_radio = QRadioButton("腰椎左凸胸椎右凸").split('=')[0] if False else None
+        self.s_lumbar_right_radio = QRadioButton("腰椎右凸胸椎左凸"); s_lumbar_right_radio = QRadioButton("腰椎右凸胸椎左凸").split('=')[0] if False else None
         
         # 添加到按钮组
         self.spine_direction_button_group.addButton(self.c_left_radio, 0)
@@ -306,6 +324,12 @@ class PatientBlocksTab(QWidget):
         info_label = QLabel("选择脊柱类型和方向将自动调整训练阶段和可视化效果")
         info_label.setStyleSheet("color: #666; font-size: 10px; padding: 5px;")
         layout.addWidget(info_label)
+        # 统一缩小单选按钮字体
+        try:
+            for rb in group.findChildren(QRadioButton):
+                rb.setFont(_small)
+        except Exception:
+            pass
         
         # 连接信号
         self.spine_type_button_group.buttonClicked.connect(self._on_spine_type_changed)
@@ -317,8 +341,7 @@ class PatientBlocksTab(QWidget):
         """处理脊柱类型变化"""
         if button == self.c_type_radio:
             self.spine_type = "C"
-            self.max_stages = 3
-            # 显示C型方向选择，隐藏S型
+            self.max_stages = 4
             self.c_direction_widget.show()
             self.s_direction_widget.hide()
             # 默认选择左凸
@@ -326,7 +349,7 @@ class PatientBlocksTab(QWidget):
             self.spine_direction = "left"
         elif button == self.s_type_radio:
             self.spine_type = "S"
-            self.max_stages = 4
+            self.max_stages = 5  # 修复：S型应该是5阶段
             # 显示S型方向选择，隐藏C型
             self.c_direction_widget.hide()
             self.s_direction_widget.show()
@@ -337,6 +360,11 @@ class PatientBlocksTab(QWidget):
         print(f"脊柱类型已更改为: {self.spine_type}型，最大阶段数: {self.max_stages}")
         self._update_controller_configs_for_spine_type()
         self._update_visualizer_for_spine_config()
+        # 切换类型后重建训练卡片
+        try:
+            self._rebuild_training_modules()
+        except Exception as _e:
+            print('重建训练卡片失败:', _e)
     
     def _on_spine_direction_changed(self, button):
         """处理脊柱方向变化"""
@@ -398,6 +426,8 @@ class PatientBlocksTab(QWidget):
         # ====== 新增：脊柱类型和方向选择区域 ======
         spine_config_group = self._create_spine_config_group()
         left_layout.addWidget(spine_config_group)
+        spine_config_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        spine_config_group.setMaximumHeight(140)
         
         # 创建4个积木可视化模块的网格布局
         from PyQt5.QtWidgets import QGridLayout
@@ -465,79 +495,57 @@ class PatientBlocksTab(QWidget):
             grid_layout.addWidget(wrapper_widget, row, col)
         
         left_layout.addLayout(grid_layout)
-        left_layout.setContentsMargins(5, 5, 5, 5)
+        left_layout.setContentsMargins( 6, 6, 6, 6 )
         
         left_widget.setLayout(left_layout)
         return left_widget
         
     def create_right_panel(self):
-        """创建右侧面板：4个训练模块 + 传感器曲线图 + 状态显示"""
+        """创建右侧面板：训练模块 + 状态显示（C:4/S:5 动态）"""
         right_widget = QWidget()
         right_layout = QVBoxLayout()
+        right_layout.setContentsMargins(6, 6, 6, 6)
+        right_layout.setSpacing(6)
         
-        # 创建4个训练模块的网格布局
+        # === 训练模块（动态）===
         modules_group = QGroupBox("训练模块")
         modules_layout = QVBoxLayout()
-        
-        # 创建2x2网格布局
         from PyQt5.QtWidgets import QGridLayout
         grid_layout = QGridLayout()
         
-        # 创建4个训练模块
+        # 保存句柄，供后续重建使用
+        self.training_modules_group = modules_group
+        self.training_modules_layout = modules_layout
+        self.training_grid_layout = grid_layout
         self.training_modules = {}
-        module_configs = [
-            ('gray_rotation', '骨盆前后反转', 0, 0),
-            ('blue_curvature', '脊柱曲率矫正', 0, 1),
-            ('gray_tilt', '骨盆左右倾斜', 1, 0),
-            ('green_tilt', '肩部左右倾斜', 1, 1)
-        ]
         
-        for controller_name, display_name, row, col in module_configs:
-            module_widget = self.create_training_module(controller_name, display_name)
-            self.training_modules[controller_name] = module_widget
-            grid_layout.addWidget(module_widget, row, col)
+        def _build_module_configs():
+            if getattr(self, 'spine_type', 'C') == 'S':
+                self.max_stages = 5
+                return [
+                    ('gray_rotation', '骨盆前后反转', 0, 0),
+                    ('blue_curvature_up', '脊柱曲率矫正·胸段', 0, 1),
+                    ('blue_curvature_down', '脊柱曲率矫正·腰段', 1, 0),
+                    ('gray_tilt', '骨盆左右倾斜', 1, 1),
+                    ('green_tilt', '肩部左右倾斜', 2, 0),
+                ]
+            else:
+                self.max_stages = 4
+                return [
+                    ('gray_rotation', '骨盆前后反转', 0, 0),
+                    ('blue_curvature', '脊柱曲率矫正', 0, 1),
+                    ('gray_tilt', '骨盆左右倾斜', 1, 0),
+                    ('green_tilt', '肩部左右倾斜', 1, 1),
+                ]
+        
+        for key, title, row, col in _build_module_configs():
+            card = self.create_training_module(key, title)
+            self.training_modules[key] = card
+            grid_layout.addWidget(card, row, col)
         
         modules_layout.addLayout(grid_layout)
         modules_group.setLayout(modules_layout)
-        
-        # 中间：传感器实时曲线图
-        plot_group = QGroupBox("传感器实时曲线图")
-        plot_group.setStyleSheet("""
-            QGroupBox {
-                font-weight: bold;
-                font-size: 14px;
-                border: 2px solid #cccccc;
-                border-radius: 5px;
-                margin: 10px 0px;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-            }
-        """)
-        
-        plot_layout = QVBoxLayout()
-        
-        # 创建绘图占位符
-        self.plot_placeholder = QLabel("传感器曲线图加载中...")
-        self.plot_placeholder.setAlignment(Qt.AlignCenter)
-        self.plot_placeholder.setStyleSheet("""
-            QLabel {
-                background-color: #f8f9fa;
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 8px;
-                font-family: 'Microsoft YaHei', SimHei;
-                font-size: 12px;
-                color: #6c757d;
-            }
-        """)
-        self.plot_placeholder.setMinimumHeight(200)
-        
-        plot_layout.addWidget(self.plot_placeholder)
-        plot_group.setLayout(plot_layout)
+
         
         # 下方：训练状态显示
         status_group = QGroupBox("训练状态与指导")
@@ -582,9 +590,8 @@ class PatientBlocksTab(QWidget):
         status_group.setLayout(status_layout)
         
         # 布局设置
-        right_layout.addWidget(modules_group, 2)     # 训练模块占2/5空间
-        right_layout.addWidget(plot_group, 2)        # 传感器曲线图占2/5空间  
-        right_layout.addWidget(status_group, 1)      # 状态显示占1/5空间
+        right_layout.insertWidget(0, modules_group, 3)  # 训练模块占主要空间
+        right_layout.addWidget(status_group, 1)   # 状态显示占较小空间
         right_layout.setContentsMargins(5, 5, 5, 5)
         
         right_widget.setLayout(right_layout)
@@ -684,24 +691,13 @@ class PatientBlocksTab(QWidget):
     def set_plot_widget(self, plot_widget):
         """设置绘图控件（从主窗口传入）"""
         if hasattr(self, 'plot_placeholder') and self.plot_placeholder:
-            # 获取占位符的父布局
+            # 替换占位符
             parent_layout = self.plot_placeholder.parent().layout()
-            if parent_layout:
-                # 移除占位符
-                parent_layout.removeWidget(self.plot_placeholder)
-                self.plot_placeholder.deleteLater()
-                
-                # 添加实际的绘图控件
-                parent_layout.addWidget(plot_widget)
-                self.plot_widget = plot_widget
-                
-                print("患者界面：传感器曲线图绘图控件设置完成")
-            else:
-                print("患者界面：无法找到占位符的父布局")
-        else:
-            print("患者界面：未找到绘图占位符")
-            # 如果没有占位符，直接保存绘图控件引用
+            parent_layout.removeWidget(self.plot_placeholder)
+            self.plot_placeholder.deleteLater()
+            parent_layout.addWidget(plot_widget)
             self.plot_widget = plot_widget
+            print("患者界面：绘图控件设置完成")
 
     def set_events_file_path(self, file_path):
         """设置事件文件路径"""
@@ -901,12 +897,13 @@ class PatientBlocksTab(QWidget):
         
         # 设置训练状态
         self.training_active = True
+        self.current_stage = 1
         self.is_training = True
         self.target_reached = False
         self.countdown_active = False
         
         # 同时启动所有4个控制器
-        controllers = ['gray_rotation', 'blue_curvature', 'gray_tilt', 'green_tilt']
+        controllers = self._all_controller_keys()
         for controller_name in controllers:
             if hasattr(self, 'start_controller'):
                 self.start_controller(controller_name)
@@ -930,7 +927,7 @@ class PatientBlocksTab(QWidget):
         self.is_training = False
         
         # 停止所有控制器线程
-        controllers = ['gray_rotation', 'blue_curvature', 'gray_tilt', 'green_tilt']
+        controllers = self._all_controller_keys()
         for controller_name in controllers:
             if hasattr(self, 'controllers') and controller_name in self.controllers:
                 if hasattr(self, 'stop_controller'):
@@ -979,6 +976,9 @@ class PatientBlocksTab(QWidget):
             
             # 更新积木可视化（采用新的驱动方式）
             self._update_visualization_new_method()
+            
+            # 强制同步数据到医生端（如果处于患者端模式）
+            self._sync_data_to_doctor_mode(data)
 
     def _update_visualization_new_method(self):
         """新的可视化更新方法（同时更新4个模块）"""
@@ -999,6 +999,23 @@ class PatientBlocksTab(QWidget):
             
         except Exception as e:
             print(f"新方法更新可视化失败: {e}")
+    
+    def _sync_data_to_doctor_mode(self, data):
+        """同步数据到医生端模式"""
+        try:
+            # 检查是否有父窗口的数据管理器
+            if hasattr(self, 'parent') and self.parent:
+                parent_window = self.parent
+                # 查找数据管理器
+                if hasattr(parent_window, 'data_manager'):
+                    data_manager = parent_window.data_manager
+                    # 如果数据管理器处于患者端模式，强制同步数据
+                    if hasattr(data_manager, 'is_patient_mode') and data_manager.is_patient_mode:
+                        # 立即添加数据点，触发同步
+                        data_manager.add_data_point(data)
+                        print(f"强制同步数据到医生端: {data[:3]}...")  # 只显示前3个值
+        except Exception as e:
+            print(f"数据同步失败: {e}")
 
     def _update_blocks_visualization_new_method(self):
         """新方法：更新所有积木可视化模块"""
@@ -1093,20 +1110,23 @@ class PatientBlocksTab(QWidget):
         
         return weighted_sum / total_weight if total_weight > 0 else 0
     
+    
     def _check_stage_completion(self):
-        """检查当前阶段是否完成（修改版：同时检查所有模块）"""
+        """检查当前阶段是否完成（按阶段对应模块判定）"""
         if not self.training_active:
             return
-        
-        # 检查所有控制器的目标达成情况
-        all_targets_reached = all(controller.is_in_target_range() for controller in self.controllers.values())
-        
+
+        # 确定当前阶段对应的控制器
+        controller_name = self._controller_for_current_stage()
+        if not controller_name or controller_name not in getattr(self, 'controllers', {}):
+            return
+
+        reached = self.controllers[controller_name].is_in_target_range()
+
         # 处理倒计时逻辑
-        if all_targets_reached and not self.countdown_active:
-            # 开始倒计时
+        if reached and not self.countdown_active:
             self._start_countdown()
-        elif not all_targets_reached and self.countdown_active:
-            # 停止倒计时
+        elif not reached and self.countdown_active:
             self._stop_countdown()
 
     def _start_countdown(self):
@@ -1137,79 +1157,95 @@ class PatientBlocksTab(QWidget):
         
         print("停止倒计时")
 
+        
     def _update_countdown(self):
         """更新倒计时显示"""
         if not self.countdown_active:
             return
-        
+
         self.countdown_seconds -= 1
-        
+
         if self.countdown_seconds > 0:
-            self.update_status("所有目标达成！", f"保持当前姿态 {self.countdown_seconds} 秒完成训练")
+            self.update_status("目标达成！", f"保持当前姿态 {self.countdown_seconds} 秒完成当前阶段")
         else:
-            # 倒计时结束，完成训练
-            self._complete_training()
-
+            # 倒计时结束，完成当前阶段
+            self._complete_current_stage()
+    
+            
     def _complete_current_stage(self):
-        """完成当前阶段（保持兼容性）"""
-        # 新版本中直接完成训练
-        self._complete_training()
-
-    def _complete_training(self):
-        """完成所有训练"""
-        self.training_active = False
-        self.is_training = False
-        self.stage_check_timer.stop()
-        self.countdown_timer.stop()
-        
-        self.update_status("训练完成", "恭喜您完成了所有训练模块！")
-        
-        # 发送训练完成信号
-        self.training_completed.emit()
-        
-        print("患者端训练完成（新驱动方式）")
-
-    def _update_stage_display(self):
-        """更新阶段显示（保持兼容性）"""
-        # 新版本中不再需要阶段显示，因为所有模块同时运行
-        pass
-
-    # ================================================================
-    # 保持兼容性的方法（原有接口）
-    # ================================================================
-
-    def update_from_events_file(self):
-        """从事件文件更新数据（保持原有功能）"""
-        if not self.events_file_path or not os.path.exists(self.events_file_path):
+        """完成当前阶段并进入下一阶段或结束"""
+        # 停止倒计时
+        self._stop_countdown()
+        # 进入下一阶段
+        self.current_stage = int(getattr(self, 'current_stage', 1)) + 1
+        # 获取最大阶段
+        stype = getattr(self, 'spine_type', 'C')
+        max_stages = 5 if stype == 'S' else 4
+        if self.current_stage > max_stages:
+            # 所有阶段完成
+            self._complete_training()
             return
-            
+        # 更新提示
         try:
-            # 检查文件是否有更新
-            events = self.read_events_file()
+            self.stage_label.setText(f"当前阶段: {self.current_stage}/{max_stages}")
+        except Exception:
+            pass
+        self.update_status("阶段完成", f"进入下一阶段（{self.current_stage}/{max_stages}）")
+    
+    def _complete_training(self):
+            self.training_active = False
+            self.is_training = False
+            self.stage_check_timer.stop()
+            self.countdown_timer.stop()
             
-            if len(events) > self.last_event_count:
-                # 重新加载阶段数据
-                self.load_events_data()
-                self.last_event_count = len(events)
-                    
-        except Exception as e:
-            print(f"从事件文件更新失败: {e}")
+            self.update_status("训练完成", "恭喜您完成了所有训练模块！")
             
+            # 发送训练完成信号
+            self.training_completed.emit()
+            
+            print("患者端训练完成（新驱动方式）")
+    
+    def _update_stage_display(self):
+            """更新阶段显示（保持兼容性）"""
+            # 新版本中不再需要阶段显示，因为所有模块同时运行
+            pass
+    
+        # ================================================================
+        # 保持兼容性的方法（原有接口）
+        # ================================================================
+    
+    def update_from_events_file(self):
+            """从事件文件更新数据（保持原有功能）"""
+            if not self.events_file_path or not os.path.exists(self.events_file_path):
+                return
+                
+            try:
+                # 检查文件是否有更新
+                events = self.read_events_file()
+                
+                if len(events) > self.last_event_count:
+                    # 重新加载阶段数据
+                    self.load_events_data()
+                    self.last_event_count = len(events)
+                        
+            except Exception as e:
+                print(f"从事件文件更新失败: {e}")
+                
     def read_events_file(self):
-        """读取事件文件"""
-        events = []
-        try:
-            with open(self.events_file_path, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    # 跳过注释行
-                    if any(key.startswith('#') for key in row.keys()):
-                        continue
-                    events.append(row)
-        except Exception as e:
-            print(f"读取事件文件时出错: {e}")
-        return events
-        
+            """读取事件文件"""
+            events = []
+            try:
+                with open(self.events_file_path, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        # 跳过注释行
+                        if any(key.startswith('#') for key in row.keys()):
+                            continue
+                        events.append(row)
+            except Exception as e:
+                print(f"读取事件文件时出错: {e}")
+            return events
+            
     def update_status(self, status, guidance, additional_info=""):
         """更新状态显示"""
         from datetime import datetime
@@ -1243,7 +1279,7 @@ class PatientBlocksTab(QWidget):
         self.status_display.verticalScrollBar().setValue(
             self.status_display.verticalScrollBar().maximum()
         )
-        
+            
     def set_sensor_count(self, count):
         """设置传感器数量"""
         old_count = self.sensor_count
@@ -1285,201 +1321,266 @@ class PatientBlocksTab(QWidget):
         }
         
     def reset_interface(self):
-        """重置界面到初始状态"""
-        if self.is_training:
-            self.stop_training_mode()
-            
-        # 重置积木参数
-        self.visualizer_params = {
-            'gray_rotation': 0,
-            'gray_tilt': 0,
-            'blue_curvature': 0,
-            'green_tilt': 0
-        }
-        
-        # 重置所有控制器
-        for controller in self.controllers.values():
-            controller.current_values = [2500.0] * self.sensor_count
-        
-        # 重置显示（移除对不存在控件的引用）
-        self._update_blocks_visualization_new_method()
-        self.update_status("系统已重置", "请重新开始训练")
-        
-        print("患者界面已重置（新驱动方式）")
-
-    # ================================================================
-    # 调试和监控方法
-    # ================================================================
-    
-    def get_controller_status(self):
-        """获取所有控制器的状态（用于调试）"""
-        status = {}
-        for name, controller in self.controllers.items():
-            # 只显示有权重的传感器
-            active_sensors = [(i, controller.sensor_weights[i]) for i in range(self.sensor_count) 
-                            if controller.selected_sensors[i] and controller.sensor_weights[i] != 0]
-            
-            status[name] = {
-                'active_sensors': active_sensors,
-                'error_range': controller.error_range,
-                'weighted_value': controller.calculate_weighted_value(),
-                'in_target_range': controller.is_in_target_range()
+            """重置界面到初始状态"""
+            if self.is_training:
+                self.stop_training_mode()
+                
+            # 重置积木参数
+            self.visualizer_params = {
+                'gray_rotation': 0,
+                'gray_tilt': 0,
+                'blue_curvature': 0,
+                'green_tilt': 0
             }
             
-            # 为有权重的传感器显示详细信息
-            for sensor_idx, weight in active_sensors:
-                status[name][f'sensor{sensor_idx+1}'] = {
-                    'weight': weight,
-                    'original': controller.original_values[sensor_idx],
-                    'target': controller.target_values[sensor_idx],
-                    'current': controller.current_values[sensor_idx],
-                    'target_range': (
-                        controller.target_values[sensor_idx] * (1 - controller.error_range),
-                        controller.target_values[sensor_idx] * (1 + controller.error_range)
-                    )
-                }
-        return status
+            # 重置所有控制器
+            for controller in self.controllers.values():
+                controller.current_values = [2500.0] * self.sensor_count
+            
+            # 重置显示
+            self.stage_label.setText("当前阶段: 等待开始")
+            self.countdown_label.setText("等待开始训练")
+            self.progress_bar.setValue(0)
+            self.progress_bar.setFormat("准备中 %p%")
+            
+            self._update_blocks_visualization_new_method()
+            self.update_status("系统已重置", "请重新开始训练")
+            
+            print("患者界面已重置（新驱动方式）")
     
-    def print_controller_status(self):
-        """打印控制器状态（用于调试）"""
-        print(f"\n=== 患者端控制器状态（详细）- 阶段{self.current_stage}" + 
-              (f"-{self.current_sub_stage}" if self.current_sub_stage else "") + " ===")
-        status = self.get_controller_status()
+        # ================================================================
+        # 调试和监控方法
+        # ================================================================
         
-        # 根据当前阶段只显示相关的控制器
-        relevant_controllers = []
-        if self.current_stage == 1:
-            relevant_controllers = ['gray_rotation']
-        elif self.current_stage == 2:
-            relevant_controllers = ['blue_curvature']
-        elif self.current_stage == 3:
-            if self.current_sub_stage == 'hip':
-                relevant_controllers = ['gray_tilt']
-            elif self.current_sub_stage == 'shoulder':
-                relevant_controllers = ['green_tilt']
-            else:
-                relevant_controllers = ['gray_tilt', 'green_tilt']
-        
-        for name in relevant_controllers:
-            if name in status:
-                ctrl_status = status[name]
-                print(f"\n{name}:")
-                print(f"  加权值: {ctrl_status['weighted_value']:.3f}")
-                print(f"  目标达成: {ctrl_status['in_target_range']}")
-                print(f"  误差范围: ±{ctrl_status['error_range']*100:.1f}%")
-                print(f"  激活的传感器:")
+    def get_controller_status(self):
+            """获取所有控制器的状态（用于调试）"""
+            status = {}
+            for name, controller in self.controllers.items():
+                # 只显示有权重的传感器
+                active_sensors = [(i, controller.sensor_weights[i]) for i in range(self.sensor_count) 
+                                if controller.selected_sensors[i] and controller.sensor_weights[i] != 0]
                 
-                for sensor_idx, weight in ctrl_status['active_sensors']:
-                    sensor_key = f'sensor{sensor_idx+1}'
-                    if sensor_key in ctrl_status:
-                        sensor_info = ctrl_status[sensor_key]
-                        target_range = sensor_info['target_range']
-                        current = sensor_info['current']
-                        in_range = target_range[0] <= current <= target_range[1]
-                        
-                        print(f"    传感器{sensor_idx+1} (权重{weight}):")
-                        print(f"      原始值: {sensor_info['original']}")
-                        print(f"      目标值: {sensor_info['target']}")
-                        print(f"      当前值: {current}")
-                        print(f"      目标范围: {target_range[0]:.1f} - {target_range[1]:.1f}")
-                        print(f"      在范围内: {'是' if in_range else '否'}")
-        print("=" * 50)
-
-    # ================================================================
-    # 向后兼容的废弃方法（保持接口一致性）
-    # ================================================================
+                status[name] = {
+                    'active_sensors': active_sensors,
+                    'error_range': controller.error_range,
+                    'weighted_value': controller.calculate_weighted_value(),
+                    'in_target_range': controller.is_in_target_range()
+                }
+                
+                # 为有权重的传感器显示详细信息
+                for sensor_idx, weight in active_sensors:
+                    status[name][f'sensor{sensor_idx+1}'] = {
+                        'weight': weight,
+                        'original': controller.original_values[sensor_idx],
+                        'target': controller.target_values[sensor_idx],
+                        'current': controller.current_values[sensor_idx],
+                        'target_range': (
+                            controller.target_values[sensor_idx] * (1 - controller.error_range),
+                            controller.target_values[sensor_idx] * (1 + controller.error_range)
+                        )
+                    }
+            return status
+        
+    def print_controller_status(self):
+            """打印控制器状态（用于调试）"""
+            print(f"\n=== 患者端控制器状态（详细）- 阶段{self.current_stage}" + 
+                  (f"-{self.current_sub_stage}" if self.current_sub_stage else "") + " ===")
+            status = self.get_controller_status()
+            
+            # 根据当前阶段只显示相关的控制器
+            relevant_controllers = []
+            if self.current_stage == 1:
+                relevant_controllers = ['gray_rotation']
+            elif self.current_stage == 2:
+                relevant_controllers = ['blue_curvature']
+            elif self.current_stage == 3:
+                if self.current_sub_stage == 'hip':
+                    relevant_controllers = ['gray_tilt']
+                elif self.current_sub_stage == 'shoulder':
+                    relevant_controllers = ['green_tilt']
+                else:
+                    relevant_controllers = ['gray_tilt', 'green_tilt']
+            
+            for name in relevant_controllers:
+                if name in status:
+                    ctrl_status = status[name]
+                    print(f"\n{name}:")
+                    print(f"  加权值: {ctrl_status['weighted_value']:.3f}")
+                    print(f"  目标达成: {ctrl_status['in_target_range']}")
+                    print(f"  误差范围: ±{ctrl_status['error_range']*100:.1f}%")
+                    print(f"  激活的传感器:")
+                    
+                    for sensor_idx, weight in ctrl_status['active_sensors']:
+                        sensor_key = f'sensor{sensor_idx+1}'
+                        if sensor_key in ctrl_status:
+                            sensor_info = ctrl_status[sensor_key]
+                            target_range = sensor_info['target_range']
+                            current = sensor_info['current']
+                            in_range = target_range[0] <= current <= target_range[1]
+                            
+                            print(f"    传感器{sensor_idx+1} (权重{weight}):")
+                            print(f"      原始值: {sensor_info['original']}")
+                            print(f"      目标值: {sensor_info['target']}")
+                            print(f"      当前值: {current}")
+                            print(f"      目标范围: {target_range[0]:.1f} - {target_range[1]:.1f}")
+                            print(f"      在范围内: {'是' if in_range else '否'}")
+            print("=" * 50)
     
+        # ================================================================
+        # 向后兼容的废弃方法（保持接口一致性）
+        # ================================================================
+        
     def _update_visualization(self):
-        """废弃方法：向后兼容"""
-        print("警告：使用了废弃的_update_visualization方法，请使用新的驱动方式")
-        self._update_visualization_new_method()
-        
+            """废弃方法：向后兼容"""
+            print("警告：使用了废弃的_update_visualization方法，请使用新的驱动方式")
+            self._update_visualization_new_method()
+            
     def _update_blocks_visualization(self):
-        """废弃方法：向后兼容"""
-        print("警告：使用了废弃的_update_blocks_visualization方法，请使用新的驱动方式")
-        self._update_blocks_visualization_new_method()
-
+            """废弃方法：向后兼容"""
+            print("警告：使用了废弃的_update_blocks_visualization方法，请使用新的驱动方式")
+            self._update_blocks_visualization_new_method()
+    
     def load_stage_data_from_events(self):
-        """保持兼容性的方法"""
-        return self.load_events_data()
-        
+            """保持兼容性的方法"""
+            return self.load_events_data()
+            
     def start_stage(self, stage_num):
-        """保持兼容性的方法"""
-        if 1 <= stage_num <= 3:
-            self.current_stage = stage_num
-            self._update_stage_display()
-            print(f"患者端：切换到阶段{stage_num}（新驱动方式）")
-
+            """保持兼容性的方法"""
+            if 1 <= stage_num <= 3:
+                self.current_stage = stage_num
+                self._update_stage_display()
+                print(f"患者端：切换到阶段{stage_num}（新驱动方式）")
+    
     def check_target_reached(self):
-        """保持兼容性的方法"""
-        if self.current_stage == 1:
-            return self.controllers['gray_rotation'].is_in_target_range()
-        elif self.current_stage == 2:
-            return self.controllers['blue_curvature'].is_in_target_range()
-        elif self.current_stage == 3:
-            # 阶段3：根据子阶段分别检查
-            if self.current_sub_stage == 'hip':
-                return self.controllers['gray_tilt'].is_in_target_range()
-            elif self.current_sub_stage == 'shoulder':
-                return self.controllers['green_tilt'].is_in_target_range()
-        return False
-        
+            """保持兼容性的方法"""
+            if self.current_stage == 1:
+                return self.controllers['gray_rotation'].is_in_target_range()
+            elif self.current_stage == 2:
+                return self.controllers['blue_curvature'].is_in_target_range()
+            elif self.current_stage == 3:
+                # 阶段3：根据子阶段分别检查
+                if self.current_sub_stage == 'hip':
+                    return self.controllers['gray_tilt'].is_in_target_range()
+                elif self.current_sub_stage == 'shoulder':
+                    return self.controllers['green_tilt'].is_in_target_range()
+            return False
+            
     def countdown_tick(self):
-        """保持兼容性的方法"""
-        self._update_countdown()
-            
+            """保持兼容性的方法"""
+            self._update_countdown()
+                
     def advance_to_next_stage(self):
-        """保持兼容性的方法"""
-        self._complete_current_stage()
-            
+            """保持兼容性的方法"""
+            self._complete_current_stage()
+                
     def complete_training(self):
-        """保持兼容性的方法"""
-        self._complete_training()
-    
+            """保持兼容性的方法"""
+            self._complete_training()
+        
     def get_spine_config(self):
-        """获取当前脊柱配置"""
-        return {
-            'spine_type': self.spine_type,
-            'spine_direction': self.spine_direction,
-            'max_stages': self.max_stages
-        }
-    
+            """获取当前脊柱配置"""
+            return {
+                'spine_type': self.spine_type,
+                'spine_direction': self.spine_direction,
+                'max_stages': self.max_stages
+            }
+        
     def set_spine_config(self, spine_type, spine_direction):
-        """设置脊柱配置"""
-        self.spine_type = spine_type
-        self.spine_direction = spine_direction
-        self.max_stages = self.stage_configs[spine_type]['max_stages']
-        
-        # 更新UI状态
-        if spine_type == "C":
-            self.c_type_radio.setChecked(True)
-            self.c_direction_widget.show()
-            self.s_direction_widget.hide()
-            if spine_direction == "left":
-                self.c_left_radio.setChecked(True)
+            """设置脊柱配置"""
+            self.spine_type = spine_type
+            self.spine_direction = spine_direction
+            self.max_stages = self.stage_configs[spine_type]['max_stages']
+            
+            # 更新UI状态
+            if spine_type == "C":
+                self.c_type_radio.setChecked(True)
+                self.c_direction_widget.show()
+                self.s_direction_widget.hide()
+                if spine_direction == "left":
+                    self.c_left_radio.setChecked(True)
+                else:
+                    self.c_right_radio.setChecked(True)
             else:
-                self.c_right_radio.setChecked(True)
-        else:
-            self.s_type_radio.setChecked(True)
-            self.c_direction_widget.hide()
-            self.s_direction_widget.show()
-            if spine_direction == "lumbar_left":
-                self.s_lumbar_left_radio.setChecked(True)
-            else:
-                self.s_lumbar_right_radio.setChecked(True)
+                self.s_type_radio.setChecked(True)
+                self.c_direction_widget.hide()
+                self.s_direction_widget.show()
+                if spine_direction == "lumbar_left":
+                    self.s_lumbar_left_radio.setChecked(True)
+                else:
+                    self.s_lumbar_right_radio.setChecked(True)
+            
+            # 更新控制器配置和可视化
+            self._update_controller_configs_for_spine_type()
+            self._update_visualizer_for_spine_config()
         
-        # 更新控制器配置和可视化
-        self._update_controller_configs_for_spine_type()
-        self._update_visualizer_for_spine_config()
-    
     def is_s_type_spine(self):
-        """检查是否为S型脊柱"""
-        return self.spine_type == "S"
-    
+            """检查是否为S型脊柱"""
+            return self.spine_type == "S"
+        
     def is_c_type_spine(self):
-        """检查是否为C型脊柱"""
-        return self.spine_type == "C"
+            """检查是否为C型脊柱"""
+            return self.spine_type == "C"
+    
+    def _rebuild_training_modules(self):
+        """根据 C/S 类型重建患者端训练卡片"""
+        if not hasattr(self, 'training_grid_layout'):
+            return
+        # 清空现有卡片
+        try:
+            for i in reversed(range(self.training_grid_layout.count())):
+                item = self.training_grid_layout.itemAt(i)
+                w = item.widget() if item else None
+                if w: w.setParent(None)
+        except Exception:
+            pass
+        self.training_modules = {}
+        # 重新构建
+        if getattr(self, 'spine_type', 'C') == 'S':
+            configs = [
+                ('gray_rotation', '骨盆前后反转', 0, 0),
+                ('blue_curvature_up', '脊柱曲率矫正·胸段', 0, 1),
+                ('blue_curvature_down', '脊柱曲率矫正·腰段', 1, 0),
+                ('gray_tilt', '骨盆左右倾斜', 1, 1),
+                ('green_tilt', '肩部左右倾斜', 2, 0),
+            ]
+        else:
+            configs = [
+                ('gray_rotation', '骨盆前后反转', 0, 0),
+                ('blue_curvature', '脊柱曲率矫正', 0, 1),
+                ('gray_tilt', '骨盆左右倾斜', 1, 0),
+                ('green_tilt', '肩部左右倾斜', 1, 1),
+            ]
+        for key, title, row, col in configs:
+            card = self.create_training_module(key, title)
+            self.training_modules[key] = card
+            self.training_grid_layout.addWidget(card, row, col)
 
+    def _all_controller_keys(self):
+        return (['gray_rotation','blue_curvature_up','blue_curvature_down','gray_tilt','green_tilt']
+                if getattr(self,'spine_type','C') == 'S'
+                else ['gray_rotation','blue_curvature','gray_tilt','green_tilt'])
+
+    def _controller_for_current_stage(self):
+        """根据当前阶段和脊柱类型确定对应的控制器"""
+        if getattr(self, 'spine_type', 'C') == 'S':
+            # S型脊柱5阶段
+            stage_controller_map = {
+                1: 'gray_rotation',
+                2: 'blue_curvature_up', 
+                3: 'blue_curvature_down',
+                4: 'gray_tilt',
+                5: 'green_tilt'
+            }
+        else:
+            # C型脊柱4阶段
+            stage_controller_map = {
+                1: 'gray_rotation',
+                2: 'blue_curvature',
+                3: 'gray_tilt', 
+                4: 'green_tilt'
+            }
+        
+        return stage_controller_map.get(self.current_stage, 'gray_rotation')
 
 # 测试代码
 if __name__ == "__main__":

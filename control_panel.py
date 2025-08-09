@@ -14,6 +14,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QIntValidator
 import serial.tools.list_ports
 import time
+from block_visualization.spine_type_selector import SpineTypeSelector
 
 class ControlPanel(QWidget):
     """控制面板类，用于显示设置选项和传感器控制"""
@@ -31,6 +32,8 @@ class ControlPanel(QWidget):
     mode_changed = pyqtSignal(str)  # 模式变更信号（"doctor" 或 "patient"）
     udp_settings_changed = pyqtSignal(bool, str, int)  # UDP设置变更信号（启用, 地址, 端口）
     filter_params_changed = pyqtSignal(dict)  # 滤波参数变更信号
+    spine_type_changed = pyqtSignal(str)  # 脊柱类型变更信号（"C" 或 "S"）
+    spine_direction_changed = pyqtSignal(str)  # 脊柱方向变更信号
 
     
     def __init__(self, parent=None):
@@ -98,6 +101,13 @@ class ControlPanel(QWidget):
         
         mode_group.setLayout(mode_layout)
         layout.addWidget(mode_group)
+        
+        # 脊柱侧弯类型选择组
+        print("ControlPanel: 创建脊柱侧弯类型选择组...")
+        self.spine_type_selector = SpineTypeSelector()
+        self.spine_type_selector.spine_type_changed.connect(self.on_spine_type_changed)
+        self.spine_type_selector.spine_direction_changed.connect(self.on_spine_direction_changed)
+        layout.addWidget(self.spine_type_selector)
         
         # 串口设置组
         print("ControlPanel: 创建串口设置组...")
@@ -390,6 +400,16 @@ class ControlPanel(QWidget):
         # 发送信号通知主窗口更新滤波器参数
         self.filter_params_changed.emit(filter_params)
     
+    def on_spine_type_changed(self, spine_type):
+        """脊柱类型变更处理"""
+        self.spine_type_changed.emit(spine_type)
+        print(f"ControlPanel: 脊柱类型已更新: {spine_type}")
+    
+    def on_spine_direction_changed(self, spine_direction):
+        """脊柱方向变更处理"""
+        self.spine_direction_changed.emit(spine_direction)
+        print(f"ControlPanel: 脊柱方向已更新: {spine_direction}")
+    
     def _on_filter_method_changed(self, idx):
         self.filter_param_stack.setCurrentIndex(idx)
     
@@ -526,6 +546,14 @@ class ControlPanel(QWidget):
         """
         source_type = self.source_type_combo.currentIndex()
         return "serial" if source_type == 0 else "bluetooth"
+    
+    def get_spine_config(self):
+        """获取脊柱配置"""
+        return self.spine_type_selector.get_spine_config()
+    
+    def set_spine_config(self, spine_type, spine_direction):
+        """设置脊柱配置"""
+        self.spine_type_selector.set_spine_config(spine_type, spine_direction)
         
     def set_acquisition_active(self, active):
         """设置采集状态，更新按钮状态

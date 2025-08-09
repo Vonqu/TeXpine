@@ -73,6 +73,9 @@ class DataManager:
         self.is_patient_mode = False
         self.patient_mapping_data = None  # 存储映射数据的引用
         
+        # ====== 数据更新回调 ======
+        self.data_updated_callback = None
+        
         # ====== 性能监控 ======
         self.performance_stats = {
             'memory_usage_mb': 0,
@@ -706,6 +709,9 @@ class DataManager:
                 # 同时统计处理后数据点
                 self.processed_data_points += 1
                 
+                # 强制触发数据更新通知（用于实时同步）
+                self._notify_data_updated(extended_values)
+                
             # 异步写入临时文件（不阻塞主线程）
             if self.temp_writer:
                 with self.file_lock:
@@ -799,7 +805,7 @@ class DataManager:
         return mapped_values
 
     def add_raw_data_point(self, values):
-        """记录原始（未滤波）数据点，仅做计数或后续扩展保存。"""
+        """记录原始（未滤波/增强）数据点，仅做计数或后续扩展保存。"""
         try:
             with self.data_lock:
                 self.raw_data_points += 1
@@ -808,10 +814,26 @@ class DataManager:
             print(f"✗ 记录原始数据点失败: {e}")
 
     def add_processed_data_point(self, values):
-        """记录已处理（滤波）数据点，作为与 add_data_point 分离的标记接口。"""
+        """记录已处理（滤波+增强）数据点，作为与 add_data_point 分离的标记接口。"""
         try:
             with self.data_lock:
                 self.processed_data_points += 1
             # 已处理数据本身通过 add_data_point 进入缓存；此处仅额外计数
         except Exception as e:
             print(f"✗ 记录处理后数据点失败: {e}")
+    
+    def _notify_data_updated(self, data_values):
+        """通知数据已更新（用于实时同步）"""
+        try:
+            # 可以在这里添加信号发射或回调通知
+            # 例如：self.data_updated.emit(data_values)
+            # 目前只是记录日志，确保数据更新被及时处理
+            if hasattr(self, 'data_updated_callback') and self.data_updated_callback:
+                self.data_updated_callback(data_values)
+        except Exception as e:
+            print(f"数据更新通知失败: {e}")
+    
+    def set_data_updated_callback(self, callback):
+        """设置数据更新回调函数"""
+        self.data_updated_callback = callback
+        print("数据更新回调函数已设置")

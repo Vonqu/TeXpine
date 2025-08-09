@@ -69,6 +69,15 @@ class EventRecorder(QObject):
         self.current_sensor_data = sensor_data
         if processed_data is not None:
             self.current_processed_data = processed_data
+    
+    def get_latest_sensor_data(self):
+        """获取最新的传感器数据（包含时间戳）"""
+        if self.current_sensor_data is not None:
+            # 添加当前时间戳
+            import time
+            timestamp = time.time()
+            return [timestamp] + list(self.current_sensor_data)
+        return None
         
     def start_new_acquisition(self):
         """开始新的采集周期"""
@@ -79,7 +88,7 @@ class EventRecorder(QObject):
         
     def record_event(self, event_name, stage=None, additional_data=None):
         """
-        记录事件数据
+        记录事件数据（增强版）
         
         Args:
             event_name: 事件名称
@@ -403,3 +412,7 @@ class EventRecorder(QObject):
             summary.append(f"  {stage}: {count}个事件")
             
         return "\n".join(summary)
+
+
+    def get_current_sensor_data(self):
+        return self.current_sensor_data

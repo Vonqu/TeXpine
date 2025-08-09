@@ -72,6 +72,7 @@ from event_recorder import EventRecorder
 from event_logger import EventLogger
 
 from block_visualization.sensor_selector import SensorSelector
+from block_visualization.spine_type_selector import SpineTypeSelector
 from fliter_processing.butterworth_filter import MultiSensorButterworthFilter
 from fliter_processing.kalman_filter import MultiSensorKalmanFilter
 from fliter_processing.savitzky_golay_filter import MultiSensorSavitzkyGolayFilter
@@ -112,6 +113,10 @@ class SpineDataSender:
         }
         
         self.events_file_loaded = False
+        
+        # 脊柱类型配置（默认C型）
+        self.spine_type = "C"
+        self.spine_direction = "left"
         
         if self.enable:
             self.init_socket()
@@ -265,6 +270,9 @@ class SpineDataSender:
             # 计算6个归一化训练指标
             training_indicators = self._calculate_training_indicators(sensor_data)
             
+            # 计算spine_curve字段（根据脊柱类型自动切换计算方式）
+            spine_curve = self._calculate_spine_curve(stage_values)
+            
             # 准备数据包
             data_package = {
                 "timestamp": current_time,
@@ -272,6 +280,7 @@ class SpineDataSender:
                 "stage_values": stage_values,
                 "stage_error_ranges": stage_error_ranges,
                 "training_indicators": training_indicators,  # 新增6个归一化参数
+                "spine_curve": spine_curve,  # 新增spine_curve字段
                 "sensor_count": len(sensor_data),
                 "events_file_loaded": self.events_file_loaded
             }
@@ -538,6 +547,45 @@ class SpineDataSender:
             print(f"计算训练指标失败: {e}")
             return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     
+    def _calculate_spine_curve(self, stage_values):
+        """根据脊柱类型计算spine_curve字段
+        
+        对于C型：由单一 blue_curvature 计算的归一化值
+        对于S型：由上下两段 blue_curvature_up / blue_curvature_down 先各算归一化，再取 max(norm_up, norm_dn)
+        """
+        try:
+            if self.spine_type == "C":
+                # C型脊柱：使用单一blue_curvature的归一化值
+                blue_curvature = stage_values.get('blue_curvature', 0.5)
+                return blue_curvature
+            
+            elif self.spine_type == "S":
+                # S型脊柱：使用上下两段blue_curvature分别归一化后取最大值
+                blue_curvature_up = stage_values.get('blue_curvature_up', 0.5)
+                blue_curvature_down = stage_values.get('blue_curvature_down', 0.5)
+                
+                # 取两个归一化值的最大值
+                spine_curve = max(blue_curvature_up, blue_curvature_down)
+                return spine_curve
+            
+            else:
+                # 未知脊柱类型，返回默认值
+                return 0.5
+                
+        except Exception as e:
+            print(f"计算spine_curve时出错: {e}")
+            return 0.5
+    
+    def set_spine_type(self, spine_type):
+        """设置脊柱类型"""
+        self.spine_type = spine_type
+        print(f"SpineDataSender: 脊柱类型设置为 {spine_type}")
+    
+    def set_spine_direction(self, spine_direction):
+        """设置脊柱方向"""
+        self.spine_direction = spine_direction
+        print(f"SpineDataSender: 脊柱方向设置为 {spine_direction}")
+    
     def update_weights_from_control_panel(self, control_panel):
         """从控制面板更新权重配置"""
         try:
@@ -659,6 +707,49 @@ class SensorMonitorMainWindow(QMainWindow):
         # ====== 模式设置 ======
         self.current_mode = "doctor"  # 默认为医生端模式
         print("11. 当前模式设置为: 医生端")
+        
+        # ====== 应用状态管理 ======
+        self.app_state = {
+            "mode": "serial",  # 或 "bluetooth"
+            "acquisition_active": False,
+            "current_sensor_data": None,
+            "filter_enabled": False,
+            "filter_type": "butterworth",
+            "filter_params": {
+                "butterworth": {"cutoff_freq": 10.0, "order": 4},
+                "kalman": {"process_noise": 0.01, "measurement_noise": 0.1},
+                "savitzky_golay": {"window_length": 5, "polyorder": 2}
+            },
+            "udp_enabled": False,
+            "udp_host": "127.0.0.1",
+            "udp_port": 6667,
+            "scoliosis": {
+                "type": "C",  # C型或S型
+                "dir": "L",   # L(左凸)或R(右凸)
+                "stages": {
+                    "C": {
+                        "max_stages": 4,
+                        "stage_descriptions": {
+                            1: "阶段1：骨盆前后翻转",
+                            2: "阶段2：脊柱曲率矫正-单段",
+                            3: "阶段3：骨盆左右倾斜",
+                            4: "阶段4：肩部左右倾斜"
+                        }
+                    },
+                    "S": {
+                        "max_stages": 5,
+                        "stage_descriptions": {
+                            1: "阶段1：骨盆前后翻转",
+                            2: "阶段2-A：上胸段曲率矫正",
+                            3: "阶段2-B：腰段曲率矫正",
+                            4: "阶段3：骨盆左右倾斜",
+                            5: "阶段4：肩部左右倾斜"
+                        }
+                    }
+                }
+            }
+        }
+        print("11.5. 应用状态管理初始化完成")
         
         # ====== 数据采集组件 ======
         self.serial_thread = None
@@ -816,6 +907,11 @@ class SensorMonitorMainWindow(QMainWindow):
         splitter.setSizes([300, 700])  # 恢复原始宽度
         
         monitor_layout.addWidget(splitter)
+        
+        # 信号同步：从control_panel.spine_type_selector发射
+        self.control_panel.spine_type_selector.spine_type_changed.connect(self._sync_spine_type_to_tabs)
+        self.control_panel.spine_type_selector.spine_direction_changed.connect(self._sync_spine_direction_to_tabs)
+        
         return monitor_widget
 
     def _create_blocks_tab_with_plot(self):
@@ -881,7 +977,9 @@ class SensorMonitorMainWindow(QMainWindow):
         # 新增：滤波参数变更信号
         self.control_panel.filter_params_changed.connect(self.on_filter_params_changed)
         
-
+        # 新增：脊柱类型和方向变更信号
+        self.control_panel.spine_type_changed.connect(self.on_spine_type_changed)
+        self.control_panel.spine_direction_changed.connect(self.on_spine_direction_changed)
         
         # 连接积木可视化Tab的事件路径设置
         self.control_panel.events_path_changed.connect(
@@ -1094,6 +1192,98 @@ class SensorMonitorMainWindow(QMainWindow):
         method = filter_params['method']
         params = filter_params['params']
         print(f"滤波参数变更: 启用={enabled}, 方法={method}, 参数={params}")
+    
+    def _sync_spine_type_to_tabs(self, spine_type):
+        """同步脊柱类型到所有标签页"""
+        print(f"MainWindow: 同步脊柱类型到所有标签页: {spine_type}")
+        self.app_state["scoliosis"]["type"] = spine_type
+        
+        # 更新UDP发送器的脊柱类型
+        if hasattr(self, 'spine_data_sender') and self.spine_data_sender:
+            self.spine_data_sender.set_spine_type(spine_type)
+            print(f"UDP发送器脊柱类型已更新: {spine_type}")
+        
+        # 同步到第二个tab（blocks_manager）
+        if hasattr(self, 'blocks_manager'):
+            blocks_tab = self.blocks_manager.get_tab_widget()
+            if hasattr(blocks_tab, 'spine_type_selector'):
+                blocks_tab.spine_type_selector.set_spine_type(spine_type)
+            if hasattr(blocks_tab, 'update_spine_type'):
+                blocks_tab.update_spine_type(spine_type)
+        
+        # 同步到第三个tab（patient_blocks_tab）
+        if hasattr(self, 'patient_blocks_tab') and self.patient_blocks_tab:
+            if hasattr(self.patient_blocks_tab, 'spine_type_selector'):
+                self.patient_blocks_tab.spine_type_selector.set_spine_type(spine_type)
+            if hasattr(self.patient_blocks_tab, 'update_spine_type'):
+                self.patient_blocks_tab.update_spine_type(spine_type)
+    
+    def _sync_spine_direction_to_tabs(self, spine_direction):
+        """同步脊柱方向到所有标签页"""
+        print(f"MainWindow: 同步脊柱方向到所有标签页: {spine_direction}")
+        self.app_state["scoliosis"]["dir"] = spine_direction
+        
+        # 更新UDP发送器的脊柱方向
+        if hasattr(self, 'spine_data_sender') and self.spine_data_sender:
+            self.spine_data_sender.set_spine_direction(spine_direction)
+            print(f"UDP发送器脊柱方向已更新: {spine_direction}")
+        
+        # 同步到第二个tab（blocks_manager）
+        if hasattr(self, 'blocks_manager'):
+            blocks_tab = self.blocks_manager.get_tab_widget()
+            if hasattr(blocks_tab, 'spine_type_selector'):
+                blocks_tab.spine_type_selector.set_spine_direction(spine_direction)
+            if hasattr(blocks_tab, 'update_spine_direction'):
+                blocks_tab.update_spine_direction(spine_direction)
+        
+        # 同步到第三个tab（patient_blocks_tab）
+        if hasattr(self, 'patient_blocks_tab') and self.patient_blocks_tab:
+            if hasattr(self.patient_blocks_tab, 'spine_type_selector'):
+                self.patient_blocks_tab.spine_type_selector.set_spine_direction(spine_direction)
+            if hasattr(self.patient_blocks_tab, 'update_spine_direction'):
+                self.patient_blocks_tab.update_spine_direction(spine_direction)
+
+    def on_spine_type_changed(self, spine_type):
+        """处理脊柱类型变更"""
+        print(f"MainWindow: 脊柱类型已更新: {spine_type}")
+        self.app_state["scoliosis"]["type"] = spine_type
+        
+        # 更新UDP发送器的脊柱类型
+        if hasattr(self, 'spine_data_sender') and self.spine_data_sender:
+            self.spine_data_sender.set_spine_type(spine_type)
+            print(f"UDP发送器脊柱类型已更新: {spine_type}")
+        
+        # 通知相关组件更新
+        if hasattr(self, 'blocks_manager'):
+            blocks_tab = self.blocks_manager.get_tab_widget()
+            if hasattr(blocks_tab, 'update_spine_type'):
+                blocks_tab.update_spine_type(spine_type)
+        
+        if hasattr(self, 'patient_blocks_tab') and self.patient_blocks_tab:
+            if hasattr(self.patient_blocks_tab, 'update_spine_type'):
+                self.patient_blocks_tab.update_spine_type(spine_type)
+    
+    def on_spine_direction_changed(self, spine_direction):
+        """处理脊柱方向变更"""
+        print(f"MainWindow: 脊柱方向已更新: {spine_direction}")
+        # 转换方向格式
+        direction_map = {
+            "left": "L",
+            "right": "R",
+            "lumbar_left": "L",
+            "lumbar_right": "R"
+        }
+        self.app_state["scoliosis"]["dir"] = direction_map.get(spine_direction, "L")
+        
+        # 通知相关组件更新
+        if hasattr(self, 'blocks_manager'):
+            blocks_tab = self.blocks_manager.get_tab_widget()
+            if hasattr(blocks_tab, 'update_spine_direction'):
+                blocks_tab.update_spine_direction(spine_direction)
+        
+        if hasattr(self, 'patient_blocks_tab') and self.patient_blocks_tab:
+            if hasattr(self.patient_blocks_tab, 'update_spine_direction'):
+                self.patient_blocks_tab.update_spine_direction(spine_direction)
         if method == 'butterworth' and enabled:
             self.butterworth_filter.update_filter_parameters(
                 cutoff_freq=params['cutoff_freq'],
@@ -1183,7 +1373,11 @@ class SensorMonitorMainWindow(QMainWindow):
             print(f"事件名称: {event_name}")
             print(f"阶段键: {stage_key}")
             
-            # 获取当前传感器数据
+            # 强制刷新当前传感器数据，确保获取最新值
+            if hasattr(self, 'plot_widget_tab1') and self.plot_widget_tab1:
+                self.plot_widget_tab1.update()  # 强制更新图表
+            
+            # 获取当前传感器数据（确保是最新的）
             current_sensor_data = self.event_recorder.get_current_sensor_data()
             if not current_sensor_data:
                 print("警告: 当前没有传感器数据")
@@ -2424,12 +2618,13 @@ class SensorMonitorMainWindow(QMainWindow):
             traceback.print_exc()
 
     def process_sensor_data(self, data):
-        """处理接收到的传感器数据（集成滤波器）"""
+        """处理接收到的传感器数据（集成滤波器和数据增强）"""
         try:
             self.data_count += 1
             filter_params = self.control_panel.get_filter_params()
+            enhancement_params = self.control_panel.get_enhancement_params()
             
-            # 滤波处理
+            # 第一步：滤波处理
             filter_enabled = filter_params['enabled']
             filter_method = filter_params['method']
             filter_params_dict = filter_params['params']

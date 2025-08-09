@@ -107,6 +107,11 @@ class SensorPlotWidget(QWidget):
             self.plot_widget.removeItem(old_marker)
             self.plot_widget.removeItem(old_text)
             
+    def force_next_update(self):
+        """强制下次更新，忽略更新频率限制"""
+        self._force_next_update = True
+        print("设置强制更新标志，下次update_plot将立即执行")
+            
     def clear_plot(self):
         """清除图表"""
         self.plot_widget.clear()
@@ -153,10 +158,16 @@ class SensorPlotWidget(QWidget):
             return
             
         # 检查是否需要更新（限制更新频率）
+        # 注意：在关键事件（如完成阶段）时，应该立即更新，不受频率限制
         current_time = time.time()
-        if current_time - self.last_update_time < self.update_interval:
+        # 如果不是强制更新且未到更新间隔，则跳过
+        force_update = getattr(self, '_force_next_update', False)
+        if not force_update and current_time - self.last_update_time < self.update_interval:
             return
         self.last_update_time = current_time
+        # 重置强制更新标志
+        if force_update:
+            self._force_next_update = False
             
         # 使用自身设置还是传入参数
         if auto_scroll is None:

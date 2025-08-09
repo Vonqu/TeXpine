@@ -1,154 +1,202 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-积木控制面板模块（修正版）
-========================
+BlockControlPanel
+-----------------
+医生端右侧“控制面板”组件。此版本在 C / S 型之间切换时：
+- C 型：显示 4 张卡片（单段曲率 blue_curvature）
+- S 型：显示 5 张卡片（胸段 blue_curvature_up、腰段 blue_curvature_down）
 
-修正内容：
-1. 确保四个传感器选择器模块完全对齐
-2. 所有模块都有手动控制功能
-3. 保持原有的蓝底高亮样式
-4. 添加误差范围设置功能
+提供 API：
+- set_spine_type(spine_type): "C" 或 "S"，切换显示的卡片
+- highlight_stage(stage: int): 根据当前阶段高亮相应卡片
+- get_controller_for_stage(stage: int) -> SensorSelector: 返回该阶段对应控件（便于权重/阈值读取）
+- error_range_changed(str, float): 任一控件误差范围变化时发出（名称, 值）
 """
 
-from PyQt5.QtWidgets import QWidget, QHBoxLayout
 from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import QWidget, QHBoxLayout
 
-# 导入修正后的SensorSelector
-from block_visualization.sensor_selector import SensorSelector
+# 说明：SensorSelector 由你的工程中其他文件提供，这里只引用其公开接口：
+# - set_highlighted(bool)
+# - get_error_range() -> float
+# - error_range_changed: pyqtSignal(float)
+# - original_value_spins / best_value_spins 等属性，被外部写入时需存在
+try:
+    from .sensor_selector import SensorSelector   # 你的项目里若有独立文件
+except Exception:
+    # 如果你的项目里 SensorSelector 是在同目录其他文件中定义的，保持导入路径统一；
+    # 此处兜底从全局导入（按你的项目结构无需改动）
+    from sensor_selector import SensorSelector    # type: ignore
+
 
 class BlockControlPanel(QWidget):
-    """
-    积木控制面板（修正版）
-    ====================
-    
-    确保四个模块功能一致且对齐
-    """
-    
-    # 新增信号
-    error_range_changed = pyqtSignal(str, float)  # 控制器名称，误差范围值
-    
-    def __init__(self, sensor_count=6, parent=None):
+    """医生端控制面板：卡片容器 + C/S 显示切换 + 阶段高亮"""
+    error_range_changed = pyqtSignal(str, float)  # 控制器名称, 误差范围
+
+    def __init__(self, sensor_count: int = 6, parent=None):
         super().__init__(parent)
         self.sensor_count = sensor_count
-        self.setup_ui()
-        self.connect_error_range_signals()
-        
-    def setup_ui(self):
-        """设置UI - 确保四个模块完全对齐"""
+        self._is_s_flag = False  # 默认 C 型
+        self._build_ui()
+        self._connect_error_range_signals()
+
+    # ---------- UI ----------
+    def _build_ui(self):
         layout = QHBoxLayout(self)
-        layout.setSpacing(10)  # 缩小间距
-        
-        # 创建四个传感器选择器，确保参数完全一致
+        layout.setSpacing(10)
+
+        # 基础四张卡片（C/S 共用）
         self.gray_rotation = SensorSelector("骨盆前后翻转", self.sensor_count, special_mode=True)
         self.blue_curvature = SensorSelector("脊柱曲率矫正", self.sensor_count, special_mode=True)
-        self.gray_tilt = SensorSelector("骨盆左右倾斜", self.sensor_count, special_mode=True)  # 修改：添加special_mode
-        self.green_tilt = SensorSelector("肩部左右倾斜", self.sensor_count, special_mode=True)  # 修改：添加special_mode
-        
-        # 设置固定宽度和高度，确保对齐
-        for control in [self.gray_rotation, self.blue_curvature, self.gray_tilt, self.green_tilt]:
-            control.setFixedWidth(250)
-            control.setMinimumHeight(450)  # 增加高度以容纳误差范围设置和手动控制
-            layout.addWidget(control)
-            
-        layout.addStretch()
-        
-    def connect_error_range_signals(self):
-        """连接误差范围变更信号"""
+        self.gray_tilt = SensorSelector("骨盆左右倾斜", self.sensor_count, special_mode=True)
+        self.green_tilt = SensorSelector("肩部左右倾斜", self.sensor_count, special_mode=True)
+
+        # S 型专用：胸/腰两段曲率
+        self.blue_curvature_up = SensorSelector("脊柱曲率矫正·胸段", self.sensor_count, special_mode=True)
+        self.blue_curvature_down = SensorSelector("脊柱曲率矫正·腰段", self.sensor_count, special_mode=True)
+
+        # 统一尺寸（可按需调整）
+        for ctrl in [
+            self.gray_rotation, self.blue_curvature,
+            self.blue_curvature_up, self.blue_curvature_down,
+            self.gray_tilt, self.green_tilt
+        ]:
+            try:
+                ctrl.setMinimumHeight(420)
+                ctrl.setFixedWidth(250)
+            except Exception:
+                pass
+
+        # 添加到布局：顺序 = 骨盆前后 → 曲率(单/胸/腰) → 骨盆倾 → 肩部倾
+        layout.addWidget(self.gray_rotation)
+        layout.addWidget(self.blue_curvature)
+        layout.addWidget(self.blue_curvature_up)
+        layout.addWidget(self.blue_curvature_down)
+        layout.addWidget(self.gray_tilt)
+        layout.addWidget(self.green_tilt)
+
+        # 默认 C 型：隐藏胸/腰两段
+        self.blue_curvature_up.hide()
+        self.blue_curvature_down.hide()
+
+    def _connect_error_range_signals(self):
+        """把每张卡片的误差范围变更汇总抛出（名称, 值）"""
         self.gray_rotation.error_range_changed.connect(
-            lambda value: self.error_range_changed.emit("gray_rotation", value)
+            lambda v: self.error_range_changed.emit("gray_rotation", v)
         )
         self.blue_curvature.error_range_changed.connect(
-            lambda value: self.error_range_changed.emit("blue_curvature", value)
+            lambda v: self.error_range_changed.emit("blue_curvature", v)
         )
         self.gray_tilt.error_range_changed.connect(
-            lambda value: self.error_range_changed.emit("gray_tilt", value)
+            lambda v: self.error_range_changed.emit("gray_tilt", v)
         )
         self.green_tilt.error_range_changed.connect(
-            lambda value: self.error_range_changed.emit("green_tilt", value)
+            lambda v: self.error_range_changed.emit("green_tilt", v)
         )
-        
-    def get_error_ranges(self):
-        """获取所有控制器的误差范围"""
-        return {
-            'gray_rotation': self.gray_rotation.get_error_range(),
-            'blue_curvature': self.blue_curvature.get_error_range(),
-            'gray_tilt': self.gray_tilt.get_error_range(),
-            'green_tilt': self.green_tilt.get_error_range()
-        }
-        
-    def get_stage_error_range(self, stage):
-        """根据阶段获取对应的误差范围"""
-        error_ranges = self.get_error_ranges()
-        
-        if stage == 1:
-            return error_ranges['gray_rotation']
-        elif stage == 2:
-            return error_ranges['blue_curvature']
-        elif stage == 3:
-            # 阶段3使用两个控制器，返回平均值
-            return (error_ranges['gray_tilt'] + error_ranges['green_tilt']) / 2
+        # S 型胸/腰段
+        self.blue_curvature_up.error_range_changed.connect(
+            lambda v: self.error_range_changed.emit("blue_curvature_up", v)
+        )
+        self.blue_curvature_down.error_range_changed.connect(
+            lambda v: self.error_range_changed.emit("blue_curvature_down", v)
+        )
+
+    # ---------- 公共接口 ----------
+    def set_spine_type(self, spine_type: str):
+        """
+        切换 C/S：
+        - C：显示单段曲率（blue_curvature），隐藏胸/腰段
+        - S：隐藏单段曲率，显示胸/腰段
+        """
+        self._is_s_flag = (str(spine_type).upper() == "S")
+        is_s = self._is_s_flag
+
+        self.blue_curvature.setVisible(not is_s)
+        self.blue_curvature_up.setVisible(is_s)
+        self.blue_curvature_down.setVisible(is_s)
+
+        # 切换后可以重置一次高亮到当前阶段（由外部再调用 highlight_stage）
+
+    def highlight_stage(self, stage: int):
+        """根据阶段高亮某张卡片（C：4 阶段；S：5 阶段）"""
+        # 先全部取消
+        for w in [
+            getattr(self, "gray_rotation", None),
+            getattr(self, "blue_curvature", None),
+            getattr(self, "blue_curvature_up", None),
+            getattr(self, "blue_curvature_down", None),
+            getattr(self, "gray_tilt", None),
+            getattr(self, "green_tilt", None),
+        ]:
+            try:
+                if w is not None and hasattr(w, "set_highlighted"):
+                    w.set_highlighted(False)
+            except Exception:
+                pass
+
+        is_s = self._is_s_flag
+        try:
+            if stage == 1:
+                self.gray_rotation.set_highlighted(True)
+            elif stage == 2:
+                # C: 单段曲率；S: 胸段
+                (self.blue_curvature_up if is_s else self.blue_curvature).set_highlighted(True)
+            elif stage == 3:
+                # C: 骨盆左右倾斜；S: 腰段
+                (self.blue_curvature_down if is_s else self.gray_tilt).set_highlighted(True)
+            elif stage == 4:
+                # C: 肩部左右倾斜；S: 骨盆左右倾斜
+                (self.gray_tilt if is_s else self.green_tilt).set_highlighted(True)
+            elif stage == 5 and is_s:
+                # S: 第 5 阶段肩部左右倾斜
+                self.green_tilt.set_highlighted(True)
+        except Exception:
+            # 某控件缺少 set_highlighted 不致命，忽略
+            pass
+
+    def get_controller_for_stage(self, stage: int) -> "SensorSelector":
+        """
+        返回当前阶段对应的控件，便于外部统一读取权重/误差等。
+        """
+        is_s = self._is_s_flag
+        if is_s:
+            mapping = {
+                1: self.gray_rotation,
+                2: self.blue_curvature_up,
+                3: self.blue_curvature_down,
+                4: self.gray_tilt,
+                5: self.green_tilt,
+            }
         else:
-            return 0.1  # 默认值
+            mapping = {
+                1: self.gray_rotation,
+                2: self.blue_curvature,
+                3: self.gray_tilt,
+                4: self.green_tilt,
+            }
+        # 默认返回第一阶段以避免 None
+        return mapping.get(stage, self.gray_rotation)
     
+    def set_stage_defaults(self, stage: int):
+        """设置指定阶段的默认参数值"""
+        try:
+            controller = self.get_controller_for_stage(stage)
+            if controller and hasattr(controller, 'reset_to_defaults'):
+                controller.reset_to_defaults()
+            
+            # 可以在这里添加更多针对特定阶段的默认设置
+            print(f"BlockControlPanel: 设置阶段{stage}默认参数")
+        except Exception as e:
+            print(f"BlockControlPanel: 设置阶段{stage}默认参数失败: {e}")
+
     def process_sensor_data(self, data_values):
-        """处理传感器数据（保持原有功能）"""
-        sensor_values = data_values[1:]
-        for i, value in enumerate(sensor_values):
-            if i < self.sensor_count:
-                self.gray_rotation.set_sensor_value(i, value)
-                self.gray_tilt.set_sensor_value(i, value)
-                self.blue_curvature.set_sensor_value(i, value)
-                self.green_tilt.set_sensor_value(i, value)
-                
-    def highlight_stage(self, stage):
-        """高亮当前阶段对应的控制器（保持原有蓝底样式）"""
-        # 1: 只高亮灰色方块前后翻转
-        # 2: 只高亮蓝色方块曲率排列
-        # 3: 高亮灰色左右倾斜和绿色左右倾斜
-        self.gray_rotation.set_highlighted(stage == 1)
-        self.blue_curvature.set_highlighted(stage == 2)
-        self.gray_tilt.set_highlighted(stage == 3)
-        self.green_tilt.set_highlighted(stage == 3)
-        
-    def set_stage_defaults(self, stage):
-        """根据阶段设置OV和RBV的默认值（保持原有功能）"""
-        # 阶段1：只调整骨盆前后翻转，其他默认
-        if stage == 1:
-            # 只需设置gray_rotation，其他保持默认
-            self.gray_rotation.set_or_rbv_defaults([
-                {'ov': 2600, 'rbv': 2350},  # 传感器1
-                {'ov': 2600, 'rbv': 2350},  # 传感器2
-                {'ov': 2600, 'rbv': 2350},  # 传感器3                                                
-                {'ov': 2600, 'rbv': 2350},  # 传感器4
-                {'ov': 2600, 'rbv': 2350},  # 传感器5
-                {'ov': 2900, 'rbv': 2500}   # 传感器6
-            ])
-        # 阶段2：脊柱曲率矫正
-        elif stage == 2:
-            self.blue_curvature.set_or_rbv_defaults([
-                {'ov': 2600, 'rbv': 2350},  # 传感器1
-                {'ov': 2600, 'rbv': 2350},  # 传感器2
-                {'ov': 2600, 'rbv': 2350},  # 传感器3                                                
-                {'ov': 2600, 'rbv': 2350},  # 传感器4
-                {'ov': 2600, 'rbv': 2350},  # 传感器5
-                {'ov': 2900, 'rbv': 2500}   # 传感器6
-            ])
-        # 阶段3：骨盆和肩部左右倾斜
-        elif stage == 3:
-            self.gray_tilt.set_or_rbv_defaults([
-                {'ov': 2600, 'rbv': 2350},  # 传感器1
-                {'ov': 2600, 'rbv': 2350},  # 传感器2
-                {'ov': 2600, 'rbv': 2350},  # 传感器3                                                
-                {'ov': 2990, 'rbv': 2650},  # 传感器4
-                {'ov': 2600, 'rbv': 2350},  # 传感器5
-                {'ov': 2600, 'rbv': 2500}   # 传感器6
-            ])
-            self.green_tilt.set_or_rbv_defaults([
-                {'ov': 2600, 'rbv': 2350},  # 传感器1
-                {'ov': 2600, 'rbv': 2350},  # 传感器2
-                {'ov': 2600, 'rbv': 2350},  # 传感器3                                                
-                {'ov': 2600, 'rbv': 2350},  # 传感器4
-                {'ov': 2600, 'rbv': 2350},  # 传感器5
-                {'ov': 2900, 'rbv': 2500}   # 传感器6
-            ])
+        """处理传感器数据，更新所有控制器"""
+        try:
+            for controller_name in ['gray_rotation', 'blue_curvature', 'blue_curvature_up', 
+                                  'blue_curvature_down', 'gray_tilt', 'green_tilt']:
+                controller = getattr(self, controller_name, None)
+                if controller and hasattr(controller, 'process_sensor_data'):
+                    controller.process_sensor_data(data_values)
+        except Exception as e:
+            print(f"BlockControlPanel: 处理传感器数据失败: {e}")
