@@ -298,6 +298,179 @@ class BlocksTab(QWidget):
             self._rebuild_event_buttons()
         except Exception as _e:
             print("_rebuild_event_buttons 初次构建失败:", _e)
+    
+    def _rebuild_event_buttons(self):
+        """根据脊柱类型重建事件按钮"""
+        # 清除现有按钮
+        if hasattr(self, 'event_buttons'):
+            for stage_buttons in self.event_buttons.values():
+                for btn in stage_buttons:
+                    btn.setParent(None)
+        
+        self.event_buttons = {}
+        
+        # 根据脊柱类型定义按钮配置
+        spine_type = getattr(self, 'spine_type', 'C')
+        
+        if spine_type == 'S':
+            # S型脊柱（5阶段）
+            button_configs = {
+                1: [("开始训练", "training_start"), ("完成阶段", "stage_complete")],
+                2: [("开始矫正(胸段)", "correction_start_up"), ("矫正完成(胸段)", "correction_complete_up")],
+                3: [("开始矫正(腰段)", "correction_start_down"), ("矫正完成(腰段)", "correction_complete_down")],
+                4: [("开始沉髋", "hip_start"), ("沉髋完成", "hip_complete")],
+                5: [("开始沉肩", "shoulder_start"), ("沉肩完成", "shoulder_complete")]
+            }
+        else:
+            # C型脊柱（4阶段）
+            button_configs = {
+                1: [("开始训练", "training_start"), ("完成阶段", "stage_complete")],
+                2: [("开始矫正", "correction_start"), ("矫正完成", "correction_complete")],
+                3: [("开始沉髋", "hip_start"), ("沉髋完成", "hip_complete"),
+                    ("开始沉肩", "shoulder_start"), ("沉肩完成", "shoulder_complete")],
+                4: [("完成训练", "training_complete")]
+            }
+        
+        # 创建按钮
+        row = 0
+        for stage, buttons in button_configs.items():
+            stage_buttons = []
+            col = 0
+            
+            for button_text, button_code in buttons:
+                btn = QPushButton(button_text)
+                btn.setMinimumHeight(35)
+                btn.setStyleSheet(self._get_button_style(button_code))
+                
+                # 连接点击事件
+                btn.clicked.connect(lambda checked, text=button_text, code=button_code: 
+                                   self._handle_event_button_click(text, code))
+                
+                # 添加到布局
+                self.event_buttons_layout.addWidget(btn, row, col)
+                stage_buttons.append(btn)
+                col += 1
+                
+                # 创建对应的按钮属性（为了兼容主窗口的连接逻辑）
+                if button_code == "hip_start":
+                    self.start_hip_btn = btn
+                elif button_code == "hip_complete":
+                    self.end_hip_btn = btn
+                elif button_code == "shoulder_start":
+                    self.start_shoulder_btn = btn
+                elif button_code == "shoulder_complete":
+                    self.end_shoulder_btn = btn
+            
+            self.event_buttons[stage] = stage_buttons
+            row += 1
+    
+    def _get_button_style(self, button_code):
+        """获取按钮样式"""
+        if "start" in button_code or "开始" in button_code:
+            # 开始类按钮 - 蓝色
+            return """
+                QPushButton {
+                    background-color: #007bff;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    padding: 6px 12px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #0056b3;
+                }
+                QPushButton:pressed {
+                    background-color: #004085;
+                }
+            """
+        elif "complete" in button_code or "完成" in button_code:
+            # 完成类按钮 - 绿色
+            return """
+                QPushButton {
+                    background-color: #28a745;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    padding: 6px 12px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #1e7e34;
+                }
+                QPushButton:pressed {
+                    background-color: #155724;
+                }
+            """
+        else:
+            # 默认按钮样式
+            return """
+                QPushButton {
+                    background-color: #6c757d;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    padding: 6px 12px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #545b62;
+                }
+                QPushButton:pressed {
+                    background-color: #3d4449;
+                }
+            """
+    
+    def _handle_event_button_click(self, button_text, button_code):
+        """处理事件按钮点击"""
+        print(f"事件按钮被点击: {button_text} ({button_code})")
+        
+        # 调用事件记录器记录事件
+        if hasattr(self, 'event_recorder'):
+            try:
+                # 获取当前传感器数据
+                if hasattr(self, 'control_panel'):
+                    sensor_data = []
+                    for i in range(self.event_recorder.sensor_count):
+                        try:
+                            sensor_data.append(getattr(self.control_panel, f'sensor_{i+1}_value', 2500.0))
+                        except:
+                            sensor_data.append(2500.0)
+                    
+                    # 记录事件
+                    self.event_recorder.record_event(
+                        event_name=button_text,
+                        event_code=button_code,
+                        stage=f"阶段{self.stage}",
+                        sensor_data=sensor_data
+                    )
+                    
+                    print(f"事件已记录: {button_text}")
+                    
+            except Exception as e:
+                print(f"记录事件时出错: {e}")
+        
+        # 更新训练记录器
+        if hasattr(self, 'training_recorder'):
+            try:
+                if "开始" in button_text:
+                    # 将按钮代码转换为阶段标识符
+                    if button_code == "hip_start":
+                        self.training_recorder.start_stage('3a')
+                    elif button_code == "shoulder_start":
+                        self.training_recorder.start_stage('3b')
+                    else:
+                        self.training_recorder.start_stage(str(self.stage))
+                elif "完成" in button_text:
+                    if button_code == "hip_complete":
+                        self.training_recorder.complete_stage('3a')
+                    elif button_code == "shoulder_complete":
+                        self.training_recorder.complete_stage('3b')
+                    else:
+                        self.training_recorder.complete_stage(str(self.stage))
+            except Exception as e:
+                print(f"更新训练记录器时出错: {e}")
+    
     def _update_event_buttons_for_stage(self, stage):
         """根据当前阶段更新事件按钮显示"""
         # 隐藏所有按钮

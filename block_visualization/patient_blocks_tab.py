@@ -1581,6 +1581,23 @@ class PatientBlocksTab(QWidget):
             }
         
         return stage_controller_map.get(self.current_stage, 'gray_rotation')
+    
+    def connect_stage_signals(self, callback):
+        """为主窗口提供连接阶段信号的接口"""
+        try:
+            connected_count = 0
+            if hasattr(self, 'training_modules'):
+                for controller_name, module_widget in self.training_modules.items():
+                    if hasattr(module_widget, 'action_button') and module_widget.action_button:
+                        connected_count += 1
+                        print(f"患者端：发现可连接的按钮 {controller_name}")
+            
+            print(f"患者端：找到 {connected_count} 个可连接的按钮，但患者端使用独立的按钮处理逻辑")
+            return True
+            
+        except Exception as e:
+            print(f"患者端连接阶段信号时出错: {e}")
+            return False
 
 # 测试代码
 if __name__ == "__main__":
