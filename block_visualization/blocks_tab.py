@@ -326,9 +326,8 @@ class BlocksTab(QWidget):
             button_configs = {
                 1: [("开始训练", "training_start"), ("完成阶段", "stage_complete")],
                 2: [("开始矫正", "correction_start"), ("矫正完成", "correction_complete")],
-                3: [("开始沉髋", "hip_start"), ("沉髋完成", "hip_complete"),
-                    ("开始沉肩", "shoulder_start"), ("沉肩完成", "shoulder_complete")],
-                4: [("完成训练", "training_complete")]
+                3: [("开始沉髋", "hip_start"), ("沉髋完成", "hip_complete")],  # 阶段3：只有沉髋
+                4: [("开始沉肩", "shoulder_start"), ("沉肩完成", "shoulder_complete")]  # 阶段4：只有沉肩
             }
         
         # 创建按钮
@@ -425,28 +424,65 @@ class BlocksTab(QWidget):
         """处理事件按钮点击"""
         print(f"事件按钮被点击: {button_text} ({button_code})")
         
+        # 确保事件记录器有最新的传感器数据
+        if hasattr(self, 'event_recorder'):
+            # 强制更新传感器数据，解决校准阶段数据延迟问题
+            self._force_update_sensor_data()
+            
+            # 如果仍然没有传感器数据，尝试从当前阶段对应的控制器获取
+            if not hasattr(self.event_recorder, 'current_sensor_data') or not self.event_recorder.current_sensor_data:
+                print("警告: 事件记录器没有当前传感器数据，尝试从控制面板获取")
+                
+                # 根据当前阶段选择正确的控制器
+                current_controller = None
+                if self.stage == 1:
+                    current_controller = self.control_panel.gray_rotation
+                    controller_name = "骨盆前后翻转"
+                elif self.stage == 2:
+                    s_type = getattr(self, 'spine_type', 'C')
+                    if s_type == 'S' and hasattr(self.control_panel, 'blue_curvature_up'):
+                        current_controller = self.control_panel.blue_curvature_up
+                        controller_name = "脊柱曲率矫正(胸段)"
+                    else:
+                        current_controller = self.control_panel.blue_curvature
+                        controller_name = "脊柱曲率矫正"
+                else:
+                    # 对于其他阶段，仍使用gray_rotation作为通用数据源
+                    current_controller = self.control_panel.gray_rotation
+                    controller_name = "通用数据源"
+                
+                if current_controller and hasattr(current_controller, 'sensor_values'):
+                    sensor_values = current_controller.sensor_values
+                    if sensor_values:
+                        print(f"从{controller_name}控制器获取到传感器数据: {sensor_values[:3]}...")
+                        # 添加时间戳并设置到事件记录器
+                        import time
+                        timestamp = time.time()
+                        sensor_data_with_timestamp = [timestamp] + sensor_values
+                        self.event_recorder.set_current_sensor_data(sensor_data_with_timestamp)
+                    else:
+                        print(f"警告: {controller_name}控制器也没有传感器数据")
+                else:
+                    print("警告: 找不到合适的控制器获取传感器数据")
+            else:
+                current_data = self.event_recorder.current_sensor_data
+                print(f"使用事件记录器中的传感器数据: {current_data[1:4] if len(current_data) > 3 else current_data}...")
+        
+        # 立即更新传感器参数设置中的原始值和最佳值
+        self._update_sensor_values(button_text, button_code)
+        
         # 调用事件记录器记录事件
         if hasattr(self, 'event_recorder'):
             try:
-                # 获取当前传感器数据
-                if hasattr(self, 'control_panel'):
-                    sensor_data = []
-                    for i in range(self.event_recorder.sensor_count):
-                        try:
-                            sensor_data.append(getattr(self.control_panel, f'sensor_{i+1}_value', 2500.0))
-                        except:
-                            sensor_data.append(2500.0)
-                    
-                    # 记录事件
-                    self.event_recorder.record_event(
-                        event_name=button_text,
-                        event_code=button_code,
-                        stage=f"阶段{self.stage}",
-                        sensor_data=sensor_data
-                    )
-                    
-                    print(f"事件已记录: {button_text}")
-                    
+                # 记录事件（事件记录器已经有最新的传感器数据）
+                self.event_recorder.record_event(
+                    event_name=button_text,
+                    event_code=button_code,
+                    stage=f"阶段{self.stage}"
+                )
+                
+                print(f"事件已记录: {button_text}")
+                
             except Exception as e:
                 print(f"记录事件时出错: {e}")
         
@@ -1163,6 +1199,14 @@ class BlocksTab(QWidget):
                 lambda v: self.update_param("blue_curvature", v))
             self.control_panel.green_tilt.value_changed.connect(
                 lambda v: self.update_param("green_tilt", v))
+            
+            # S型脊柱的额外控制器信号连接
+            if hasattr(self.control_panel, 'blue_curvature_up'):
+                self.control_panel.blue_curvature_up.value_changed.connect(
+                    lambda v: self.update_param("blue_curvature_up", v))
+            if hasattr(self.control_panel, 'blue_curvature_down'):
+                self.control_panel.blue_curvature_down.value_changed.connect(
+                    lambda v: self.update_param("blue_curvature_down", v))
         
             # 阈值警报信号
             self.control_panel.gray_rotation.threshold_alert.connect(
@@ -1244,21 +1288,43 @@ class BlocksTab(QWidget):
     
     def update_param(self, param_name, value):
         """更新可视化参数"""
-        # 阶段权限检查
-        stage_param_map = {
-            1: ["gray_rotation"],
-            2: ["blue_curvature"], 
-            3: ["gray_tilt", "green_tilt"]
-        }
+        # 根据脊柱类型和阶段进行权限检查
+        s_type = getattr(self, 'spine_type', 'C')
         
-        if param_name not in stage_param_map.get(self.stage, []):
+        # 动态阶段权限检查（支持C型和S型）
+        if s_type == 'S':
+            # S型脊柱（5阶段）
+            stage_param_map = {
+                1: ["gray_rotation"],
+                2: ["blue_curvature_up"], 
+                3: ["blue_curvature_down"],
+                4: ["gray_tilt"],
+                5: ["green_tilt"]
+            }
+        else:
+            # C型脊柱（4阶段）
+            stage_param_map = {
+                1: ["gray_rotation"],
+                2: ["blue_curvature"], 
+                3: ["gray_tilt"],
+                4: ["green_tilt"]
+            }
+        
+        # 检查参数是否属于当前阶段
+        allowed_params = stage_param_map.get(self.stage, [])
+        if param_name not in allowed_params:
+            print(f"参数 {param_name} 不属于{s_type}型第{self.stage}阶段，跳过更新")
             return
+            
+        print(f"更新参数: {param_name} = {value:.3f} (阶段{self.stage}, {s_type}型)")
         
         # 更新可视化器参数
         param_mapping = {
             "gray_rotation": "gray_block_rotation",
             "gray_tilt": "gray_block_tilt",
             "blue_curvature": "blue_blocks_curvature",
+            "blue_curvature_up": "blue_blocks_curvature",  # S型胸段映射到蓝色积木
+            "blue_curvature_down": "blue_blocks_curvature", # S型腰段也映射到蓝色积木
             "green_tilt": "green_block_tilt"
         }
         
@@ -1524,10 +1590,13 @@ class BlocksTab(QWidget):
     
     def _update_sensor_values(self, event_name, event_code=None):
         """更新传感器参数设置模块中的原始值和最佳值（S/C 统一版）"""
+        print(f"更新传感器参数: {event_name} (阶段{self.stage})")
+        
         if not hasattr(self, 'control_panel'):
+            print("警告: 没有 control_panel，无法更新传感器参数")
             return
 
-        # 如有“完成阶段”事件，尽量同步最新数据与图表
+        # 如有"完成阶段"事件，尽量同步最新数据与图表
         if "完成阶段" in (event_name or "") and hasattr(self, 'event_recorder'):
             if hasattr(self.event_recorder, 'get_latest_sensor_data'):
                 latest = self.event_recorder.get_latest_sensor_data()
@@ -1538,22 +1607,73 @@ class BlocksTab(QWidget):
 
         current = getattr(self.event_recorder, 'current_sensor_data', None)
         if not current or len(current) <= 1:
+            print("警告: 没有有效的传感器数据，无法更新参数")
             return
         sensor_values = current[1:]  # 去时间戳
+        print(f"传感器数据: {len(sensor_values)}个传感器")
+        print(f"前10个传感器数据: {sensor_values[:10]}")
+        
+        # 同时检查控制器中的实际显示数据
+        if hasattr(self, 'control_panel') and self.stage == 1:
+            ctrl = self.control_panel.gray_rotation
+            print("骨盆前后翻转控制器当前状态:")
+            for i in range(min(10, len(getattr(ctrl, 'sensor_values', [])))):
+                actual_val = ctrl.sensor_values[i] if i < len(ctrl.sensor_values) else "N/A"
+                is_checked = ctrl.sensor_checkboxes[i].isChecked() if i < len(ctrl.sensor_checkboxes) else False
+                print(f"  传感器{i+1}: 控制器中值={actual_val}, 选中={is_checked}, 事件记录器值={sensor_values[i] if i < len(sensor_values) else 'N/A'}")
 
         def write_values(ctrl, which):
             if not ctrl:
+                print("警告: 控制器为空，无法写入值")
                 return
+            
             if which == "ov":  # 原始
                 spins = getattr(ctrl, 'original_value_spins', [])
+                value_type = "原始值(OV)"
             else:              # 最佳
-                spins = (getattr(ctrl, 'curvature_best_value_spins', None) or
-                         getattr(ctrl, 'rotate_best_value_spins', None) or
-                         getattr(ctrl, 'lateral_best_value_spins', None) or
-                         getattr(ctrl, 'torsion_best_value_spins', None) or [])
-            for i, v in enumerate(sensor_values):
-                if i < len(spins):
-                    spins[i].setValue(int(v))
+                # 对于SensorSelector，都使用rotate_best_value_spins
+                spins = getattr(ctrl, 'rotate_best_value_spins', [])
+                value_type = "最佳值(RBV)"
+            
+            # 获取被选中的传感器
+            sensor_checkboxes = getattr(ctrl, 'sensor_checkboxes', [])
+            if not sensor_checkboxes:
+                print("警告: 控制器没有传感器选择框")
+                return
+            
+            # *** 关键修复：直接使用控制器中的实时传感器数据 ***
+            ctrl_sensor_values = getattr(ctrl, 'sensor_values', [])
+            print(f"比较数据源:")
+            print(f"  事件记录器数据: {sensor_values[:5]}...")
+            print(f"  控制器实时数据: {ctrl_sensor_values[:5]}...")
+            
+            # 使用控制器中的实时数据而不是事件记录器的数据
+            data_to_use = ctrl_sensor_values if len(ctrl_sensor_values) >= len(sensor_values) else sensor_values
+            print(f"  使用数据源: {'控制器实时数据' if data_to_use == ctrl_sensor_values else '事件记录器数据'}")
+                
+            updated_count = 0
+            # 只更新被选中的传感器对应的值
+            for i in range(min(len(data_to_use), len(spins), len(sensor_checkboxes))):
+                if sensor_checkboxes[i].isChecked():  # 只处理被选中的传感器
+                    old_value = spins[i].value()
+                    new_value = int(data_to_use[i])
+                    spins[i].setValue(new_value)
+                    updated_count += 1
+                    
+                    # 获取当前显示值进行对比验证
+                    current_display_value = "未知"
+                    if hasattr(ctrl, 'value_labels') and i < len(ctrl.value_labels):
+                        display_text = ctrl.value_labels[i].text()
+                        # 从"当前值: 2500"中提取数字
+                        if "当前值:" in display_text:
+                            try:
+                                current_display_value = display_text.split("当前值:")[-1].strip()
+                            except:
+                                pass
+                    
+                    print(f"  传感器{i+1}: {value_type} {old_value} -> {new_value} (界面显示: {current_display_value})")
+                    
+            print(f"✓ 更新了 {updated_count} 个被选中传感器的{value_type}输入框")
 
         s_type = getattr(self, 'spine_type', 'C')
 

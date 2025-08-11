@@ -211,51 +211,122 @@ class SensorSelector(QGroupBox):
         
         # 首先更新所有传感器的实时值显示（不管是否被选中）
         for i in range(self.sensor_count):
+            # 确保索引不越界
+            if i >= len(self.sensor_values):
+                break
+                
             sensor_val = self.sensor_values[i]
             # 更新当前值显示
             if hasattr(self, 'value_labels') and i < len(self.value_labels):
                 self.value_labels[i].setText(f"当前值: {sensor_val}")
             
-            # 计算归一化值并显示
-            if hasattr(self, 'norm_labels') and i < len(self.norm_labels):
+            # 计算归一化值并显示 - 添加索引检查
+            if (hasattr(self, 'norm_labels') and i < len(self.norm_labels) and 
+                i < len(self.original_value_spins) and i < len(self.rotate_best_value_spins)):
                 ov = self.original_value_spins[i].value()
                 rbv = self.rotate_best_value_spins[i].value()
-                # 防止分母为0
-                if ov == rbv:
-                    norm = 1.0
+                
+                # 计算归一化值，增加详细的调试信息
+                if abs(ov - rbv) < 0.1:  # 避免分母接近0
+                    norm = 0.0
+                    if ov != rbv:  # 只在确实不同时打印警告
+                        print(f"警告: 传感器{i+1} 原始值({ov})和最佳值({rbv})太接近，归一化设为0")
                 else:
                     norm = (sensor_val - rbv) / (ov - rbv)
-                norm = max(0.0, min(1.0, norm))
-                self.norm_labels[i].setText(f"归一化: {norm:.2f}")
+                    # 检查异常值
+                    if norm < -1.0 or norm > 2.0:
+                        print(f"警告: 传感器{i+1} 归一化值异常 {norm:.3f}")
+                        print(f"  当前值: {sensor_val}, 原始值(OV): {ov}, 最佳值(RBV): {rbv}")
+                        print(f"  计算: ({sensor_val} - {rbv}) / ({ov} - {rbv}) = {norm:.3f}")
+                
+                # 限制到合理范围，但保留超出0-1的信息用于调试
+                display_norm = max(0.0, min(1.0, norm))
+                if norm != display_norm:
+                    self.norm_labels[i].setText(f"归一化: {display_norm:.2f} (原始:{norm:.2f})")
+                else:
+                    self.norm_labels[i].setText(f"归一化: {norm:.2f}")
         
         # 然后计算被选中传感器的加权值
         for i in range(self.sensor_count):
-            if self.sensor_checkboxes[i].isChecked():
-                weight = self.weight_spinboxes[i].value()
-                if weight != 0:
-                    ov = self.original_value_spins[i].value()
-                    rbv = self.rotate_best_value_spins[i].value()
-                    sensor_val = self.sensor_values[i]
-                    # 防止分母为0
-                    if ov == rbv:
-                        norm = 1.0
-                    else:
-                        norm = (sensor_val - rbv) / (ov - rbv)
-                    norm = max(0.0, min(1.0, norm))
-                    total_weight += abs(weight)
-                    weighted_sum += norm * weight
-                    # 实时显示
-                    self.value_labels[i].setText(f"当前值: {sensor_val}")
-                    self.norm_labels[i].setText(f"归一化: {norm:.2f}")
-                    if abs(norm) > 1e-2:
-                        all_zero = False
+            # 确保所有必要的索引都不越界
+            if (i < len(self.sensor_checkboxes) and 
+                i < len(self.weight_spinboxes) and 
+                i < len(self.sensor_values) and
+                i < len(self.original_value_spins) and 
+                i < len(self.rotate_best_value_spins)):
+                
+                if self.sensor_checkboxes[i].isChecked():
+                    weight = self.weight_spinboxes[i].value()
+                    if weight != 0:
+                        ov = self.original_value_spins[i].value()
+                        rbv = self.rotate_best_value_spins[i].value()
+                        sensor_val = self.sensor_values[i]
+                        # 使用与上面相同的归一化逻辑
+                        if abs(ov - rbv) < 0.1:  # 避免分母接近0
+                            norm = 0.0
+                        else:
+                            norm = (sensor_val - rbv) / (ov - rbv)
+                        # 限制到0-1范围用于计算
+                        norm = max(0.0, min(1.0, norm))
+                        total_weight += abs(weight)
+                        weighted_sum += norm * weight
+                        # 实时显示（添加索引检查）
+                        if i < len(self.value_labels):
+                            self.value_labels[i].setText(f"当前值: {sensor_val}")
+                        if i < len(self.norm_labels):
+                            self.norm_labels[i].setText(f"归一化: {norm:.2f}")
+                        if abs(norm) > 1e-2:
+                            all_zero = False
         
         if total_weight > 0:
             combined_value = weighted_sum / total_weight
+            
+            # 数据稳定性检查，避免突变
+            if hasattr(self, 'current_value') and self.current_value is not None:
+                # 如果变化超过阈值，进行平滑处理
+                change = abs(combined_value - self.current_value)
+                if change > 0.3:  # 如果变化超过30%，进行平滑
+                    smoothed_value = self.current_value * 0.7 + combined_value * 0.3
+                    print(f"{self.title()}: 数据平滑 {self.current_value:.3f} -> {combined_value:.3f} (平滑后: {smoothed_value:.3f})")
+                    combined_value = smoothed_value
+            
             self.current_value = combined_value
             self.value_label.setText(f"{combined_value:.2f}")
             self.value_changed.emit(combined_value)
             self.manual_slider.setValue(int(combined_value * 90))
+            
+            # 输出加权计算详细信息（仅在值发生显著变化时）
+            if not hasattr(self, '_last_debug_value') or abs(combined_value - self._last_debug_value) > 0.05:
+                selected_sensors = []
+                for i in range(self.sensor_count):
+                    if (i < len(self.sensor_checkboxes) and 
+                        i < len(self.weight_spinboxes) and 
+                        i < len(self.sensor_values) and
+                        self.sensor_checkboxes[i].isChecked() and
+                        self.weight_spinboxes[i].value() != 0):
+                        
+                        weight = self.weight_spinboxes[i].value()
+                        sensor_val = self.sensor_values[i]
+                        if (i < len(self.original_value_spins) and i < len(self.rotate_best_value_spins)):
+                            ov = self.original_value_spins[i].value()
+                            rbv = self.rotate_best_value_spins[i].value()
+                            if abs(ov - rbv) >= 0.1:
+                                norm = (sensor_val - rbv) / (ov - rbv)
+                                norm = max(0.0, min(1.0, norm))
+                                selected_sensors.append(f"传感器{i+1}(权重{weight:.1f},归一化{norm:.3f})")
+                
+                if selected_sensors:
+                    print(f"{self.title()}: 加权计算 = {combined_value:.3f}")
+                    print(f"  选中传感器: {', '.join(selected_sensors)}")
+                    print(f"  总权重: {total_weight:.1f}, 加权和: {weighted_sum:.3f}")
+                
+                self._last_debug_value = combined_value
+        else:
+            # 没有选中传感器或权重为0
+            self.current_value = 0.0
+            self.value_label.setText("0.00")
+            self.value_changed.emit(0.0)
+            self.manual_slider.setValue(0)
         
         # 判断所有归一化是否为0（仅special_mode显示）
         if hasattr(self, 'correct_label'):
@@ -354,9 +425,13 @@ class SensorSelector(QGroupBox):
             if len(data_values) > 1:
                 sensor_data = data_values[1:]
                 
+                # 确保sensor_values列表有足够的长度
+                while len(self.sensor_values) < self.sensor_count:
+                    self.sensor_values.append(0.0)
+                
                 # 更新每个传感器的当前值
                 for i, value in enumerate(sensor_data):
-                    if i < self.sensor_count:
+                    if i < self.sensor_count and i < len(self.sensor_values):
                         self.sensor_values[i] = float(value)
                 
                 # 触发界面更新
@@ -364,3 +439,5 @@ class SensorSelector(QGroupBox):
                 
         except Exception as e:
             print(f"SensorSelector {self.title()}: 处理传感器数据失败: {e}")
+            print(f"  数据长度: {len(data_values)}, 传感器数量: {self.sensor_count}")
+            print(f"  sensor_values长度: {len(self.sensor_values)}")

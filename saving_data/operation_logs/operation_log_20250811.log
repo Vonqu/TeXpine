@@ -3,3 +3,40 @@
 2025-08-11 12:42:06.232 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-11 12:42:06.232", "details": {"statistics": {"display_data_count": 3658, "total_data_count": 3658, "raw_data_count": 3658, "events_count": 0}}}
 2025-08-11 12:42:18.621 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 12:42:18.621", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
 2025-08-11 12:43:09.488 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-11 12:43:09.488", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 6233, "raw_data_count": 9895, "events_count": 5}}}
+2025-08-11 13:50:06.582 [INFO] === 新的操作记录会话开始 ===
+2025-08-11 13:50:13.986 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 13:50:13.986", "details": {"source": "serial", "settings": {"port": "/dev/cu.debug-console", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-11 13:50:21.294 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-11 13:50:21.293", "details": {"statistics": {"display_data_count": 0, "total_data_count": 0, "raw_data_count": 0, "events_count": 0}}}
+2025-08-11 13:51:32.454 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 13:51:32.454", "details": {"source": "serial", "settings": {"port": "/dev/cu.debug-console", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-11 13:51:36.748 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-11 13:51:36.748", "details": {"statistics": {"display_data_count": 0, "total_data_count": 0, "raw_data_count": 0, "events_count": 5}}}
+2025-08-11 13:51:38.087 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 13:51:38.087", "details": {"source": "serial", "settings": {"port": "/dev/cu.debug-console", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-11 13:51:58.853 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-11 13:51:58.852", "details": {"statistics": {"display_data_count": 0, "total_data_count": 0, "raw_data_count": 0, "events_count": 5}}}
+2025-08-11 13:52:23.152 [INFO] === 新的操作记录会话开始 ===
+2025-08-11 13:52:39.852 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 13:52:39.852", "details": {"source": "serial", "settings": {"port": "/dev/cu.debug-console", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-11 14:04:59.790 [INFO] === 新的操作记录会话开始 ===
+2025-08-11 14:05:35.775 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 14:05:35.774", "details": {"source": "serial", "settings": {"port": "/dev/cu.ESP32-ADC-10CH", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-11 14:05:51.429 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-11 14:05:51.429", "details": {"statistics": {"display_data_count": 0, "total_data_count": 0, "raw_data_count": 0, "events_count": 5}}}
+2025-08-11 14:05:53.209 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 14:05:53.209", "details": {"source": "bluetooth", "settings": {"port": "/dev/cu.debug-console", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-11 14:06:02.732 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-11 14:06:02.732", "details": {"statistics": {"display_data_count": 0, "total_data_count": 0, "raw_data_count": 0, "events_count": 5}}}
+2025-08-11 14:06:10.590 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 14:06:10.590", "details": {"source": "bluetooth", "settings": {"port": "/dev/cu.ESP32-ADC-10CH", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-11 14:06:19.647 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-11 14:06:19.647", "details": {"statistics": {"display_data_count": 0, "total_data_count": 0, "raw_data_count": 0, "events_count": 5}}}
+2025-08-11 14:06:29.639 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 14:06:29.639", "details": {"source": "serial", "settings": {"port": "/dev/cu.ESP32-ADC-10CH", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-11 14:10:06.929 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-11 14:10:06.929", "details": {"statistics": {"display_data_count": 0, "total_data_count": 0, "raw_data_count": 0, "events_count": 5}}}
+2025-08-11 15:13:15.614 [INFO] === 新的操作记录会话开始 ===
+2025-08-11 15:13:40.739 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 15:13:40.739", "details": {"source": "serial", "settings": {"port": "/dev/cu.ESP32-ADC-10CH", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-11 15:14:02.395 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-11 15:14:02.395", "details": {"statistics": {"display_data_count": 0, "total_data_count": 0, "raw_data_count": 0, "events_count": 0}}}
+2025-08-11 15:23:05.865 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 15:23:05.865", "details": {"source": "serial", "settings": {"port": "/dev/cu.usbserial-1120", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-11 15:23:16.355 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-11 15:23:16.355", "details": {"statistics": {"display_data_count": 0, "total_data_count": 0, "raw_data_count": 0, "events_count": 0}}}
+2025-08-11 15:23:17.630 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 15:23:17.630", "details": {"source": "serial", "settings": {"port": "/dev/cu.usbserial-1120", "baud_rate": 115200, "num_sensors": 14, "duration": null, "mode": "doctor"}}}
+2025-08-11 15:40:51.873 [INFO] === 新的操作记录会话开始 ===
+2025-08-11 15:41:00.612 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 15:41:00.612", "details": {"source": "serial", "settings": {"port": "/dev/cu.usbserial-1120", "baud_rate": 115200, "num_sensors": 14, "duration": null, "mode": "doctor"}}}
+2025-08-11 15:54:41.403 [INFO] === 新的操作记录会话开始 ===
+2025-08-11 15:54:50.076 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 15:54:50.076", "details": {"source": "serial", "settings": {"port": "/dev/cu.usbserial-1120", "baud_rate": 115200, "num_sensors": 14, "duration": null, "mode": "doctor"}}}
+2025-08-11 16:03:44.489 [INFO] === 新的操作记录会话开始 ===
+2025-08-11 16:03:58.390 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 16:03:58.389", "details": {"source": "serial", "settings": {"port": "/dev/cu.usbserial-1120", "baud_rate": 115200, "num_sensors": 14, "duration": null, "mode": "doctor"}}}
+2025-08-11 16:20:38.878 [INFO] === 新的操作记录会话开始 ===
+2025-08-11 16:20:46.399 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 16:20:46.399", "details": {"source": "serial", "settings": {"port": "/dev/cu.usbserial-1120", "baud_rate": 115200, "num_sensors": 14, "duration": null, "mode": "doctor"}}}
+2025-08-11 16:25:37.954 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-11 16:25:37.954", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 8696, "raw_data_count": 8696, "events_count": 0}}}
+2025-08-11 16:28:01.207 [INFO] === 新的操作记录会话开始 ===
+2025-08-11 16:28:10.463 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 16:28:10.463", "details": {"source": "serial", "settings": {"port": "/dev/cu.usbserial-1120", "baud_rate": 115200, "num_sensors": 14, "duration": null, "mode": "doctor"}}}
+2025-08-11 16:35:14.930 [INFO] === 新的操作记录会话开始 ===
+2025-08-11 16:35:22.758 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 16:35:22.758", "details": {"source": "serial", "settings": {"port": "/dev/cu.usbserial-1120", "baud_rate": 115200, "num_sensors": 14, "duration": null, "mode": "doctor"}}}
