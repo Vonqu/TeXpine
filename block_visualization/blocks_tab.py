@@ -32,7 +32,7 @@ class BlocksTab(QWidget):
     # ====== 对外信号 ======
     alert_signal = pyqtSignal(str)
     
-    def __init__(self, sensor_count=6, parent=None):
+    def __init__(self, sensor_count=10, parent=None):
         print("BlocksTab: 开始初始化...")
         super().__init__(parent)
         
@@ -1613,3 +1613,25 @@ class BlocksTab(QWidget):
         # 完成阶段后把数据写进训练记录器
         if ("完成阶段" in (event_name or "")) and hasattr(self, 'training_recorder') and self.training_recorder:
             self.training_recorder.complete_stage(self.stage, sensor_values)
+            
+    def set_sensor_count(self, count):
+        """设置传感器数量"""
+        if count == self.sensor_count:
+            return
+        
+        print(f"BlocksTab: 传感器数量从 {self.sensor_count} 更改为 {count}")
+        
+        # 更新传感器数量
+        self.sensor_count = count
+        
+        # 更新控制面板的传感器数量
+        if hasattr(self, 'control_panel') and self.control_panel:
+            if hasattr(self.control_panel, 'set_sensor_count'):
+                self.control_panel.set_sensor_count(count)
+        
+        # 更新事件记录器的传感器数量
+        if hasattr(self, 'event_recorder') and self.event_recorder:
+            if hasattr(self.event_recorder, 'set_num_sensors'):
+                self.event_recorder.set_num_sensors(count)
+        
+        print(f"BlocksTab: 传感器数量更新完成")

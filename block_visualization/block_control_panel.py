@@ -34,7 +34,7 @@ class BlockControlPanel(QWidget):
     """医生端控制面板：卡片容器 + C/S 显示切换 + 阶段高亮"""
     error_range_changed = pyqtSignal(str, float)  # 控制器名称, 误差范围
 
-    def __init__(self, sensor_count: int = 6, parent=None):
+    def __init__(self, sensor_count: int = 10, parent=None):
         super().__init__(parent)
         self.sensor_count = sensor_count
         self._is_s_flag = False  # 默认 C 型
@@ -56,14 +56,14 @@ class BlockControlPanel(QWidget):
         self.blue_curvature_up = SensorSelector("脊柱曲率矫正·胸段", self.sensor_count, special_mode=True)
         self.blue_curvature_down = SensorSelector("脊柱曲率矫正·腰段", self.sensor_count, special_mode=True)
 
-        # 统一尺寸（可按需调整）
+        # 统一尺寸（调整高度以适应10个传感器）
         for ctrl in [
             self.gray_rotation, self.blue_curvature,
             self.blue_curvature_up, self.blue_curvature_down,
             self.gray_tilt, self.green_tilt
         ]:
             try:
-                ctrl.setMinimumHeight(420)
+                ctrl.setMinimumHeight(480)  # 增加高度以适应更多传感器
                 ctrl.setFixedWidth(250)
             except Exception:
                 pass
@@ -200,3 +200,22 @@ class BlockControlPanel(QWidget):
                     controller.process_sensor_data(data_values)
         except Exception as e:
             print(f"BlockControlPanel: 处理传感器数据失败: {e}")
+            
+    def set_sensor_count(self, count):
+        """设置传感器数量"""
+        if count == self.sensor_count:
+            return
+        
+        print(f"BlockControlPanel: 传感器数量从 {self.sensor_count} 更改为 {count}")
+        
+        # 更新传感器数量
+        self.sensor_count = count
+        
+        # 更新所有控制器的传感器数量
+        for controller_name in ['gray_rotation', 'blue_curvature', 'blue_curvature_up', 
+                              'blue_curvature_down', 'gray_tilt', 'green_tilt']:
+            controller = getattr(self, controller_name, None)
+            if controller and hasattr(controller, 'set_sensor_count'):
+                controller.set_sensor_count(count)
+        
+        print(f"BlockControlPanel: 传感器数量更新完成")

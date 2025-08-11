@@ -450,11 +450,11 @@ class ControlPanel(QWidget):
             "band": "带通滤波"
         }
         filter_type_text = filter_type_map.get(btype, "低通滤波")
-        self.filter_type_combo.setCurrentText(filter_type_text)
+        self.butter_type_combo.setCurrentText(filter_type_text)
         
-        self.cutoff_freq_spin.setValue(cutoff_freq)
-        self.sampling_freq_spin.setValue(fs)
-        self.filter_order_spin.setValue(order)
+        self.butter_cutoff_spin.setValue(cutoff_freq)
+        self.butter_fs_spin.setValue(fs)
+        self.butter_order_spin.setValue(order)
         
     def on_source_type_changed(self, index):
         """处理数据源类型变更"""
@@ -668,3 +668,20 @@ class ControlPanel(QWidget):
             list: 曲线名称列表
         """
         return [label.text() for label in self.curve_labels]
+    
+    def get_enhancement_params(self):
+        """获取数据增强参数
+        
+        Returns:
+            dict: 数据增强参数字典，默认禁用增强功能
+        """
+        return {
+            'enabled': False,
+            'method': 'motion_and_lock',
+            'enhancement_params': {},
+            'second_filter': {
+                'enabled': False,
+                'method': 'kalman',
+                'params': {}
+            }
+        }

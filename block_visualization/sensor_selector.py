@@ -11,7 +11,7 @@
 4. 添加误差范围设置
 """
 
-from PyQt5.QtWidgets import (QGroupBox, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QCheckBox, QDoubleSpinBox, QSpinBox, QSlider, QFormLayout)
+from PyQt5.QtWidgets import (QGroupBox, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QCheckBox, QDoubleSpinBox, QSpinBox, QSlider, QFormLayout, QScrollArea, QWidget)
 from PyQt5.QtCore import Qt, pyqtSignal
 
 class SensorSelector(QGroupBox):
@@ -27,7 +27,7 @@ class SensorSelector(QGroupBox):
     threshold_alert = pyqtSignal(bool, str)
     error_range_changed = pyqtSignal(float)  # 新增：误差范围变更信号
     
-    def __init__(self, title, sensor_count=6, parent=None, special_mode=False):
+    def __init__(self, title, sensor_count=10, parent=None, special_mode=False):
         super().__init__(title, parent)
         self.sensor_count = sensor_count
         self.current_value = 0
@@ -64,9 +64,18 @@ class SensorSelector(QGroupBox):
         error_range_group.setLayout(error_range_layout)
         layout.addWidget(error_range_group)
         
-        # 传感器选择和权重组（保持原有样式）
+        # 传感器选择和权重组（保持原有样式，添加滚动支持）
         sensor_group = QGroupBox("传感器选择和权重")
-        sensor_layout = QVBoxLayout()
+        sensor_group_layout = QVBoxLayout()
+        
+        # 创建滚动区域
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setMaximumHeight(300)  # 限制最大高度以支持滚动
+        
+        # 创建滚动内容容器
+        scroll_content = QWidget()
+        sensor_layout = QVBoxLayout(scroll_content)
         
         self.sensor_checkboxes = []
         self.weight_spinboxes = []
@@ -135,7 +144,10 @@ class SensorSelector(QGroupBox):
             checkbox.stateChanged.connect(lambda state, idx=i: self.on_sensor_selected(state, idx))
             weight_spin.valueChanged.connect(self.update_combined_value)
         
-        sensor_group.setLayout(sensor_layout)
+        # 设置滚动区域
+        scroll_area.setWidget(scroll_content)
+        sensor_group_layout.addWidget(scroll_area)
+        sensor_group.setLayout(sensor_group_layout)
         layout.addWidget(sensor_group)
         
         # 当前值显示
@@ -197,6 +209,26 @@ class SensorSelector(QGroupBox):
         weighted_sum = 0
         all_zero = True
         
+        # 首先更新所有传感器的实时值显示（不管是否被选中）
+        for i in range(self.sensor_count):
+            sensor_val = self.sensor_values[i]
+            # 更新当前值显示
+            if hasattr(self, 'value_labels') and i < len(self.value_labels):
+                self.value_labels[i].setText(f"当前值: {sensor_val}")
+            
+            # 计算归一化值并显示
+            if hasattr(self, 'norm_labels') and i < len(self.norm_labels):
+                ov = self.original_value_spins[i].value()
+                rbv = self.rotate_best_value_spins[i].value()
+                # 防止分母为0
+                if ov == rbv:
+                    norm = 1.0
+                else:
+                    norm = (sensor_val - rbv) / (ov - rbv)
+                norm = max(0.0, min(1.0, norm))
+                self.norm_labels[i].setText(f"归一化: {norm:.2f}")
+        
+        # 然后计算被选中传感器的加权值
         for i in range(self.sensor_count):
             if self.sensor_checkboxes[i].isChecked():
                 weight = self.weight_spinboxes[i].value()
@@ -284,3 +316,51 @@ class SensorSelector(QGroupBox):
         ov_values = [spin.value() for spin in self.original_value_spins]
         rbv_values = [spin.value() for spin in self.rotate_best_value_spins]
         return ov_values, rbv_values
+        
+    def set_sensor_count(self, count):
+        """设置传感器数量"""
+        if count == self.sensor_count:
+            return
+            
+        print(f"{self.title()} 传感器数量从 {self.sensor_count} 更改为 {count}")
+        
+        # 更新传感器数量
+        self.sensor_count = count
+        
+        # 调整传感器相关数据列表的长度
+        if len(self.sensor_values) != count:
+            if count > len(self.sensor_values):
+                # 增加传感器，补充默认值
+                self.sensor_values.extend([0] * (count - len(self.sensor_values)))
+                self.sensor_weights.extend([0] * (count - len(self.sensor_weights)))
+            else:
+                # 减少传感器，截断数据
+                self.sensor_values = self.sensor_values[:count]
+                self.sensor_weights = self.sensor_weights[:count]
+        
+        # 重新设置UI（如果需要的话）
+        # 目前保持简单实现，主要是更新内部数据结构
+        
+        print(f"{self.title()} 传感器数量更新完成")
+    
+    def process_sensor_data(self, data_values):
+        """处理实时传感器数据
+        
+        Args:
+            data_values: 传感器数据列表 [timestamp, sensor1, sensor2, ..., sensorN]
+        """
+        try:
+            # 跳过时间戳，获取传感器数据
+            if len(data_values) > 1:
+                sensor_data = data_values[1:]
+                
+                # 更新每个传感器的当前值
+                for i, value in enumerate(sensor_data):
+                    if i < self.sensor_count:
+                        self.sensor_values[i] = float(value)
+                
+                # 触发界面更新
+                self.update_combined_value()
+                
+        except Exception as e:
+            print(f"SensorSelector {self.title()}: 处理传感器数据失败: {e}")

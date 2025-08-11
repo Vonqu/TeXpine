@@ -43,7 +43,7 @@ class BlocksTabManager(QObject):
     alert_signal = pyqtSignal(str)  # 阈值警报信号
     stage_changed = pyqtSignal(int)  # 训练阶段变更信号
     
-    def __init__(self, sensor_count=6, parent=None):
+    def __init__(self, sensor_count=10, parent=None):
         """
         初始化积木可视化管理器
         ======================
@@ -406,7 +406,7 @@ class BlocksTabManager(QObject):
 # 积木可视化工具函数
 # ================================================================
 
-def create_blocks_visualization_manager(sensor_count=6):
+def create_blocks_visualization_manager(sensor_count=10):
     """
     创建积木可视化管理器的工厂函数
     ==============================

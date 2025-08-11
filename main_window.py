@@ -495,11 +495,11 @@ class SpineDataSender:
         """计算6个归一化训练指标"""
         try:
             # 确保传感器数据有效
-            if not sensor_data or len(sensor_data) < 7:
-                return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            if not sensor_data or len(sensor_data) < 11:
+                return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             
-            # 获取传感器数据（假设前7个传感器）
-            sensors = sensor_data[:7]
+            # 获取传感器数据（假设前10个传感器）
+            sensors = sensor_data[:10]
             
             # 1. 骨盆前后翻转 (基于传感器1和2的差值)
             pelvis_forward_backward = abs(sensors[0] - sensors[1]) / 100.0
@@ -517,14 +517,14 @@ class SpineDataSender:
             pelvis_left_right = min(max(pelvis_left_right, 0.0), 1.0)
             
             # 4. 肩部左右倾斜 (基于传感器4和5的差值)
-            if len(sensors) >= 6:
+            if len(sensors) >= 10:
                 shoulder_left_right = abs(sensors[4] - sensors[5]) / 60.0
             else:
                 shoulder_left_right = 0.0
             shoulder_left_right = min(max(shoulder_left_right, 0.0), 1.0)
             
             # 5. 沉肩 (基于肩部传感器的平均值)
-            if len(sensors) >= 6:
+            if len(sensors) >= 10:
                 shoulder_drop = (sensors[4] + sensors[5]) / 200.0
             else:
                 shoulder_drop = 0.0
@@ -1192,6 +1192,29 @@ class SensorMonitorMainWindow(QMainWindow):
         method = filter_params['method']
         params = filter_params['params']
         print(f"滤波参数变更: 启用={enabled}, 方法={method}, 参数={params}")
+        
+        # 更新对应的滤波器参数
+        if method == 'butterworth' and enabled:
+            self.butterworth_filter.update_filter_parameters(
+                cutoff_freq=params['cutoff_freq'],
+                fs=params['fs'],
+                order=params['order'],
+                btype=params['btype']
+            )
+        elif method == 'kalman' and enabled:
+            self.kalman_filter.update_filter_parameters(
+                process_noise=params['process_noise'],
+                measurement_noise=params['measurement_noise']
+            )
+            print(f"卡尔曼滤波参数已更新: 过程噪声={params['process_noise']:.3f}, "
+                  f"测量噪声={params['measurement_noise']:.3f}")
+        elif method == 'savitzky_golay' and enabled:
+            self.sg_filter.update_filter_parameters(
+                window_length=params['window_length'],
+                polyorder=params['polyorder']
+            )
+        else:
+            print("未知的滤波方法")
     
     def _sync_spine_type_to_tabs(self, spine_type):
         """同步脊柱类型到所有标签页"""
@@ -1284,28 +1307,6 @@ class SensorMonitorMainWindow(QMainWindow):
         if hasattr(self, 'patient_blocks_tab') and self.patient_blocks_tab:
             if hasattr(self.patient_blocks_tab, 'update_spine_direction'):
                 self.patient_blocks_tab.update_spine_direction(spine_direction)
-        if method == 'butterworth' and enabled:
-            self.butterworth_filter.update_filter_parameters(
-                cutoff_freq=params['cutoff_freq'],
-                fs=params['fs'],
-                order=params['order'],
-                btype=params['btype']
-            )
-        elif method == 'kalman' and enabled:
-            params = filter_params['params']
-            self.kalman_filter.update_filter_parameters(
-                process_noise=params['process_noise'],
-                measurement_noise=params['measurement_noise']
-            )
-            print(f"卡尔曼滤波参数已更新: 过程噪声={params['process_noise']:.3f}, "
-                  f"测量噪声={params['measurement_noise']:.3f}")
-        elif method == 'savitzky_golay' and enabled:
-            self.sg_filter.update_filter_parameters(
-                window_length=params['window_length'],
-                polyorder=params['polyorder']
-            )
-        else:
-            print("未知的滤波方法")
 
 
 

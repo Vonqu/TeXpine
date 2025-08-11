@@ -1,0 +1,5 @@
+2025-08-11 12:41:02.678 [INFO] === 新的操作记录会话开始 ===
+2025-08-11 12:41:34.471 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 12:41:34.471", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-11 12:42:06.232 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-11 12:42:06.232", "details": {"statistics": {"display_data_count": 3658, "total_data_count": 3658, "raw_data_count": 3658, "events_count": 0}}}
+2025-08-11 12:42:18.621 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-11 12:42:18.621", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-11 12:43:09.488 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-11 12:43:09.488", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 6233, "raw_data_count": 9895, "events_count": 5}}}

@@ -19,7 +19,7 @@ blocks_visualization/
 
 使用方式：
 from blocks_visualization import BlocksTabManager
-manager = BlocksTabManager(sensor_count=6)
+manager = BlocksTabManager(sensor_count=10)
 """
 
 # 导入核心类，使其可以直接从包中导入

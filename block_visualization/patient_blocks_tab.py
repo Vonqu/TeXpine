@@ -43,7 +43,7 @@ class PatientSensorController:
     模拟tab2中SensorSelector的功能，用于计算加权归一化值
     """
     
-    def __init__(self, name, sensor_count=6):
+    def __init__(self, name, sensor_count=10):
         self.name = name
         self.sensor_count = sensor_count
         
@@ -136,7 +136,7 @@ class PatientBlocksTab(QWidget):
     request_data = pyqtSignal()      # 请求数据信号
     training_completed = pyqtSignal()  # 训练完成信号
     
-    def __init__(self, sensor_count=6, parent=None):
+    def __init__(self, sensor_count=10, parent=None):
         super().__init__(parent)
         self.sensor_count = sensor_count
         

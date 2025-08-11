@@ -17,8 +17,7 @@
 import numpy as np
 import time
 from typing import List, Tuple, Dict, Optional
-# 临时注释scipy导入来解决环境问题
-# from scipy import signal
+from scipy import signal
 from collections import deque
 
 
