@@ -83,6 +83,7 @@ class SensorSelector(QGroupBox):
         self.rotate_best_value_spins = []
         self.value_labels = []
         self.norm_labels = []
+        self.value_label = []
         
         for i in range(self.sensor_count):
             sensor_row = QHBoxLayout()
@@ -167,14 +168,14 @@ class SensorSelector(QGroupBox):
         slider_group.setLayout(slider_layout)
         layout.addWidget(slider_group)
         
-        # 新增：整体动作正确性Label（仅special_mode显示）
+        # # 新增：整体动作正确性Label（仅special_mode显示）
         if self.special_mode:
-            self.correct_label = QLabel("当前动作：不正确")
+            self.correct_label = QLabel("当前动作：不达标")
             self.correct_label.setStyleSheet("font-size: 18px; color: red; font-weight: bold;")
             layout.addWidget(self.correct_label)
         
         self.setLayout(layout)
-        self.manual_slider.valueChanged.connect(self.update_manual_value)
+        # self.manual_slider.valueChanged.connect(self.update_manual_value)
     
     def on_error_range_changed(self, value):
         """处理误差范围变更"""
@@ -278,18 +279,13 @@ class SensorSelector(QGroupBox):
         
         if total_weight > 0:
             combined_value = weighted_sum / total_weight
-            
-            # 数据稳定性检查，避免突变
-            if hasattr(self, 'current_value') and self.current_value is not None:
-                # 如果变化超过阈值，进行平滑处理
-                change = abs(combined_value - self.current_value)
-                if change > 0.3:  # 如果变化超过30%，进行平滑
-                    smoothed_value = self.current_value * 0.7 + combined_value * 0.3
-                    print(f"{self.title()}: 数据平滑 {self.current_value:.3f} -> {combined_value:.3f} (平滑后: {smoothed_value:.3f})")
-                    combined_value = smoothed_value
+
             
             self.current_value = combined_value
             self.value_label.setText(f"{combined_value:.2f}")
+            
+            # 发射信号前添加调试输出
+            # print(f"SensorSelector [{self.title()}]: 发射value_changed信号 = {combined_value:.3f}")
             self.value_changed.emit(combined_value)
             self.manual_slider.setValue(int(combined_value * 90))
             
@@ -313,10 +309,11 @@ class SensorSelector(QGroupBox):
                                 norm = max(0.0, min(1.0, norm))
                                 selected_sensors.append(f"传感器{i+1}(权重{weight:.1f},归一化{norm:.3f})")
                 
-                if selected_sensors:
-                    print(f"{self.title()}: 加权计算 = {combined_value:.3f}")
-                    print(f"  选中传感器: {', '.join(selected_sensors)}")
-                    print(f"  总权重: {total_weight:.1f}, 加权和: {weighted_sum:.3f}")
+                # if selected_sensors:
+                #     print(f"SensorSelector [{self.title()}]: 加权计算详情:")
+                #     print(f"  最终值: {combined_value:.3f}")
+                #     print(f"  选中传感器: {', '.join(selected_sensors)}")
+                #     print(f"  总权重: {total_weight:.1f}, 加权和: {weighted_sum:.3f}")
                 
                 self._last_debug_value = combined_value
         else:

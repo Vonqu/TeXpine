@@ -1,0 +1,53 @@
+{
+  "stage": 4,
+  "event_name": "沉髋完成",
+  "timestamp": 22.257547,
+  "raw_sensor_data": [
+    1463.0,
+    1897.0,
+    1089.0,
+    1904.0,
+    1488.0,
+    1686.0,
+    1006.0,
+    1789.0,
+    1371.0,
+    192.0
+  ],
+  "sensor_weights": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "error_range": 0.1,
+  "recorded_at": "2025-08-12T16:13:31.437581",
+  "visualization_state": {
+    "stage": 4,
+    "sensor_count": 10,
+    "gray_rotation": 0.0,
+    "gray_tilt": 1.0,
+    "blue_curvature": 1.0,
+    "green_tilt": 0.0,
+    "alerts": {
+      "gray_rotation": false,
+      "gray_tilt": false,
+      "blue_curvature": false,
+      "green_tilt": false
+    },
+    "memory_stats": {
+      "plot_data_points": 500,
+      "plot_window_size": 5000,
+      "decimation_factor": 1,
+      "memory_usage_mb": 0,
+      "data_points_processed": 10440,
+      "plot_updates_per_sec": 3834
+    }
+  }
+}

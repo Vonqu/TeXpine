@@ -1,0 +1,53 @@
+{
+  "stage": 4,
+  "event_name": "沉肩完成",
+  "timestamp": 26.941126,
+  "raw_sensor_data": [
+    1456.0,
+    1911.0,
+    1073.0,
+    1897.0,
+    1483.0,
+    1687.0,
+    1035.0,
+    1813.0,
+    1370.0,
+    193.0
+  ],
+  "sensor_weights": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "error_range": 0.1,
+  "recorded_at": "2025-08-12T16:15:36.377124",
+  "visualization_state": {
+    "stage": 4,
+    "sensor_count": 10,
+    "gray_rotation": 0.0,
+    "gray_tilt": 1.0,
+    "blue_curvature": 0.0,
+    "green_tilt": 0.9712223915099151,
+    "alerts": {
+      "gray_rotation": false,
+      "gray_tilt": false,
+      "blue_curvature": false,
+      "green_tilt": false
+    },
+    "memory_stats": {
+      "plot_data_points": 585,
+      "plot_window_size": 5000,
+      "decimation_factor": 1,
+      "memory_usage_mb": 0,
+      "data_points_processed": 13077,
+      "plot_updates_per_sec": 4744
+    }
+  }
+}

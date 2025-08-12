@@ -45,8 +45,8 @@ if current_dir not in sys.path:
     sys.path.append(current_dir)
 
 # 导入数据采集层模块
-from serial_thread import SerialThread
-from bluetooth_receiver import BluetoothReceiver
+from read_data.serial_thread import SerialThread
+from read_data.bluetooth_receiver import BluetoothReceiver
 
 # 导入数据处理层模块
 from data_manager import DataManager
@@ -75,6 +75,7 @@ from fliter_processing.butterworth_filter import MultiSensorButterworthFilter
 from fliter_processing.kalman_filter import MultiSensorKalmanFilter
 from fliter_processing.savitzky_golay_filter import MultiSensorSavitzkyGolayFilter
 
+from utils.stage_utils import format_stage_label
 
 # 如果没有jsonencoder模块，创建一个简单的编码器
 import json
@@ -109,7 +110,10 @@ class SpineDataSender:
             'gray_rotation': {'original_values': [], 'target_values': [], 'weights': [], 'error_range': 0.1},
             'blue_curvature': {'original_values': [], 'target_values': [], 'weights': [], 'error_range': 0.1},
             'gray_tilt': {'original_values': [], 'target_values': [], 'weights': [], 'error_range': 0.1},
-            'green_tilt': {'original_values': [], 'target_values': [], 'weights': [], 'error_range': 0.1}
+            'green_tilt': {'original_values': [], 'target_values': [], 'weights': [], 'error_range': 0.1},
+            # S型专用上下段
+            'blue_curvature_up': {'original_values': [], 'target_values': [], 'weights': [], 'error_range': 0.1},
+            'blue_curvature_down': {'original_values': [], 'target_values': [], 'weights': [], 'error_range': 0.1}
         }
         
         self.events_file_loaded = False
@@ -145,16 +149,30 @@ class SpineDataSender:
         try:
             print(f"正在加载事件文件用于UDP发送: {events_file_path}")
             
-            # 事件映射配置
+            # 事件映射配置（统一且唯一的阶段标签）
             event_mappings = {
+                # 阶段1
                 ("阶段1", "开始训练"): ('gray_rotation', 'original'),
                 ("阶段1", "完成阶段"): ('gray_rotation', 'target'),
+
+                # 阶段2（C型单段）
                 ("阶段2", "开始矫正"): ('blue_curvature', 'original'),
                 ("阶段2", "矫正完成"): ('blue_curvature', 'target'),
+
+                # 阶段2（S型分段，仅保留标准写法）
+                ("阶段2A", "开始矫正(胸段)"): ('blue_curvature_up', 'original'),
+                ("阶段2A", "矫正完成(胸段)"): ('blue_curvature_up', 'target'),
+                ("阶段2B", "开始矫正(腰段)"): ('blue_curvature_down', 'original'),
+                ("阶段2B", "矫正完成(腰段)"): ('blue_curvature_down', 'target'),
+
+                # 阶段3（沉髋）
                 ("阶段3", "开始沉髋"): ('gray_tilt', 'original'),
                 ("阶段3", "沉髋完成"): ('gray_tilt', 'target'),
-                ("阶段3", "开始沉肩"): ('green_tilt', 'original'),
-                ("阶段3", "沉肩完成"): ('green_tilt', 'target'),
+
+                # 沉肩（阶段3/4/5 不同视图/脊柱类型的表现）
+                ("阶段4", "开始沉肩"): ('green_tilt', 'original'),
+                ("阶段4", "沉肩完成"): ('green_tilt', 'target'),
+
             }
             
             with open(events_file_path, 'r', encoding='utf-8') as f:
@@ -267,8 +285,8 @@ class SpineDataSender:
             # 获取四个阶段的误差范围
             stage_error_ranges = self._get_all_error_ranges()
             
-            # 计算6个归一化训练指标
-            training_indicators = self._calculate_training_indicators(sensor_data)
+            # # 计算6个归一化训练指标
+            # training_indicators = self._calculate_training_indicators(sensor_data)
             
             # 计算spine_curve字段（根据脊柱类型自动切换计算方式）
             spine_curve = self._calculate_spine_curve(stage_values)
@@ -279,7 +297,7 @@ class SpineDataSender:
                 "sensor_data": sensor_data,
                 "stage_values": stage_values,
                 "stage_error_ranges": stage_error_ranges,
-                "training_indicators": training_indicators,  # 新增6个归一化参数
+                # "training_indicators": training_indicators,  # 新增6个归一化参数
                 "spine_curve": spine_curve,  # 新增spine_curve字段
                 "sensor_count": len(sensor_data),
                 "events_file_loaded": self.events_file_loaded
@@ -447,61 +465,61 @@ class SpineDataSender:
             for stage_name, config in self.stage_configs.items()
         }
     
-    def _calculate_training_indicators(self, sensor_data):
-        """计算归一化训练指标"""
-        try:
-            # 确保传感器数据有效
-            if not sensor_data or len(sensor_data) < 11:
-                return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    # def _calculate_training_indicators(self, sensor_data):
+    #     """计算归一化训练指标"""
+    #     try:
+    #         # 确保传感器数据有效
+    #         if not sensor_data or len(sensor_data) < 11:
+    #             return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             
-            # 获取传感器数据（假设前10个传感器）
-            sensors = sensor_data[:10]
+    #         # 获取传感器数据（假设前10个传感器）
+    #         sensors = sensor_data[:10]
             
-            # 1. 骨盆前后翻转 (基于传感器1和2的差值)
-            pelvis_forward_backward = abs(sensors[0] - sensors[1]) / 100.0
-            pelvis_forward_backward = min(max(pelvis_forward_backward, 0.0), 1.0)
+    #         # 1. 骨盆前后翻转 (基于传感器1和2的差值)
+    #         pelvis_forward_backward = abs(sensors[0] - sensors[1]) / 100.0
+    #         pelvis_forward_backward = min(max(pelvis_forward_backward, 0.0), 1.0)
             
-            # 2. 脊柱曲率矫正 (基于中间传感器的曲率)
-            if len(sensors) >= 5:
-                spine_curvature = abs(sensors[2] - (sensors[1] + sensors[3]) / 2) / 50.0
-            else:
-                spine_curvature = 0.0
-            spine_curvature = min(max(spine_curvature, 0.0), 1.0)
+    #         # 2. 脊柱曲率矫正 (基于中间传感器的曲率)
+    #         if len(sensors) >= 5:
+    #             spine_curvature = abs(sensors[2] - (sensors[1] + sensors[3]) / 2) / 50.0
+    #         else:
+    #             spine_curvature = 0.0
+    #         spine_curvature = min(max(spine_curvature, 0.0), 1.0)
             
-            # 3. 骨盆左右倾斜 (基于传感器0和6的差值)
-            pelvis_left_right = abs(sensors[0] - sensors[6]) / 80.0
-            pelvis_left_right = min(max(pelvis_left_right, 0.0), 1.0)
+    #         # 3. 骨盆左右倾斜 (基于传感器0和6的差值)
+    #         pelvis_left_right = abs(sensors[0] - sensors[6]) / 80.0
+    #         pelvis_left_right = min(max(pelvis_left_right, 0.0), 1.0)
             
-            # 4. 肩部左右倾斜 (基于传感器4和5的差值)
-            if len(sensors) >= 10:
-                shoulder_left_right = abs(sensors[4] - sensors[5]) / 60.0
-            else:
-                shoulder_left_right = 0.0
-            shoulder_left_right = min(max(shoulder_left_right, 0.0), 1.0)
+    #         # 4. 肩部左右倾斜 (基于传感器4和5的差值)
+    #         if len(sensors) >= 10:
+    #             shoulder_left_right = abs(sensors[4] - sensors[5]) / 60.0
+    #         else:
+    #             shoulder_left_right = 0.0
+    #         shoulder_left_right = min(max(shoulder_left_right, 0.0), 1.0)
             
-            # 5. 沉肩 (基于肩部传感器的平均值)
-            if len(sensors) >= 10:
-                shoulder_drop = (sensors[4] + sensors[5]) / 200.0
-            else:
-                shoulder_drop = 0.0
-            shoulder_drop = min(max(shoulder_drop, 0.0), 1.0)
+    #         # 5. 沉肩 (基于肩部传感器的平均值)
+    #         if len(sensors) >= 10:
+    #             shoulder_drop = (sensors[4] + sensors[5]) / 200.0
+    #         else:
+    #             shoulder_drop = 0.0
+    #         shoulder_drop = min(max(shoulder_drop, 0.0), 1.0)
             
-            # 6. 沉髋 (基于髋部传感器的平均值)
-            hip_drop = (sensors[0] + sensors[6]) / 200.0
-            hip_drop = min(max(hip_drop, 0.0), 1.0)
+    #         # 6. 沉髋 (基于髋部传感器的平均值)
+    #         hip_drop = (sensors[0] + sensors[6]) / 200.0
+    #         hip_drop = min(max(hip_drop, 0.0), 1.0)
             
-            return [
-                pelvis_forward_backward,
-                spine_curvature,
-                pelvis_left_right,
-                shoulder_left_right,
-                shoulder_drop,
-                hip_drop
-            ]
+    #         return [
+    #             pelvis_forward_backward,
+    #             spine_curvature,
+    #             pelvis_left_right,
+    #             shoulder_left_right,
+    #             shoulder_drop,
+    #             hip_drop
+    #         ]
             
-        except Exception as e:
-            print(f"计算训练指标失败: {e}")
-            return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    #     except Exception as e:
+    #         print(f"计算训练指标失败: {e}")
+    #         return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     
     def _calculate_spine_curve(self, stage_values):
         """根据脊柱类型计算spine_curve字段
@@ -549,14 +567,17 @@ class SpineDataSender:
                 ('gray_rotation', control_panel.gray_rotation),
                 ('blue_curvature', control_panel.blue_curvature),
                 ('gray_tilt', control_panel.gray_tilt),
-                ('green_tilt', control_panel.green_tilt)
+                ('green_tilt', control_panel.green_tilt),
+                # S型上下段（如果存在则读取）
+                ('blue_curvature_up', getattr(control_panel, 'blue_curvature_up', None)),
+                ('blue_curvature_down', getattr(control_panel, 'blue_curvature_down', None))
             ]
             
             for stage_name, controller in controllers:
                 weights = []
-                sensor_count = len(self.stage_configs[stage_name].get('weights', [7]))
+                sensor_count = len(self.stage_configs[stage_name].get('weights', [7])) if stage_name in self.stage_configs else 7
                 for i in range(max(sensor_count, 7)):  # 至少7个传感器
-                    if i < len(controller.sensor_checkboxes):
+                    if controller and i < len(controller.sensor_checkboxes):
                         if controller.sensor_checkboxes[i].isChecked():
                             if i < len(controller.weight_spinboxes):
                                 weights.append(controller.weight_spinboxes[i].value())
@@ -568,11 +589,11 @@ class SpineDataSender:
                         weights.append(0.0)
                 
                 # 更新权重（但保持原始值和目标值不变）
-                if not self.events_file_loaded:
+                if not self.events_file_loaded and stage_name in self.stage_configs:
                     self.stage_configs[stage_name]['weights'] = weights
                 
                 # 更新误差范围
-                if hasattr(controller, 'get_error_range'):
+                if controller and hasattr(controller, 'get_error_range') and stage_name in self.stage_configs:
                     self.stage_configs[stage_name]['error_range'] = controller.get_error_range()
                     
         except Exception as e:
@@ -733,6 +754,8 @@ class SensorMonitorMainWindow(QMainWindow):
         self.blocks_manager = BlocksTabManager()
         blocks_tab = self.blocks_manager.get_tab_widget()
         if hasattr(blocks_tab, 'event_recorder'):
+            # 统一复用主窗口的事件记录器，避免多实例覆盖同一文件
+            blocks_tab.event_recorder = self.event_recorder
             blocks_tab.event_recorder.set_num_sensors(initial_sensor_count)
         
         # 设置父窗口引用，用于获取当前模式
@@ -757,10 +780,52 @@ class SensorMonitorMainWindow(QMainWindow):
         self.spine_data_sender.set_control_panel(self.control_panel)
         # print("14. UDP发送器初始化完成")
         
+        # 【新增】阶段映射（供主窗口按钮事件使用）
+        # 统一主窗口的阶段键 -> 名称、涉及传感器索引、事件名
+        # 注意：与 BlocksTab 自带按钮含义对齐（C型：1/2/3a/3b；S型内部按钮也支持）
+        self.stage_sensor_mapping = {
+            '1': {
+                'name': '骨盆前后翻转',
+                'sensor_indices': list(range(self.control_panel.get_num_sensors())),
+                'original_event': '开始训练',
+                'target_event': '完成阶段'
+            },
+            '2': {
+                'name': '脊柱曲率矫正',
+                'sensor_indices': list(range(self.control_panel.get_num_sensors())),
+                'original_event': '开始矫正',
+                'target_event': '矫正完成'
+            },
+            '2a': {
+                'name': '脊柱曲率矫正·胸段',
+                'sensor_indices': list(range(self.control_panel.get_num_sensors())),
+                'original_event': '开始矫正(胸段)',
+                'target_event': '矫正完成(胸段)'
+            },
+            '2b': {
+                'name': '脊柱曲率矫正·腰段',
+                'sensor_indices': list(range(self.control_panel.get_num_sensors())),
+                'original_event': '开始矫正(腰段)',
+                'target_event': '矫正完成(腰段)'
+            },
+            '3a': {
+                'name': '骨盆左右倾斜',
+                'sensor_indices': list(range(self.control_panel.get_num_sensors())),
+                'original_event': '开始沉髋',
+                'target_event': '沉髋完成'
+            },
+            '3b': {
+                'name': '肩部左右倾斜',
+                'sensor_indices': list(range(self.control_panel.get_num_sensors())),
+                'original_event': '开始沉肩',
+                'target_event': '沉肩完成'
+            }
+        }
+        
         # 设置UI
-        # print("15. 开始初始化UI...")
+
         self._init_ui()
-        # print("16. UI初始化完成")
+   
         
         # 连接信号与槽
         # print("17. 开始连接信号与槽...")
@@ -778,69 +843,6 @@ class SensorMonitorMainWindow(QMainWindow):
         self._ui_refresh_timer.timeout.connect(self._refresh_realtime_ui)
         self._ui_refresh_timer.start(int(1000 / self._ui_refresh_hz))
         
-        # 【新增】添加阶段和传感器的映射关系
-        self.stage_sensor_mapping = {
-            # 阶段1：骨盆前后翻转
-            1: {
-                'name': '骨盆前后翻转',
-                'original_event': '开始训练',
-                'target_event': '完成阶段',
-                'sensor_indices': [0, 1]  # 对应sensor1, sensor2的索引
-            },
-            # 阶段2：脊柱曲率矫正
-            2: {
-                'name': '脊柱曲率矫正', 
-                'original_event': '开始矫正',
-                'target_event': '矫正完成',
-                'sensor_indices': [2, 3]  # 对应sensor3, sensor4的索引
-            },
-            # 阶段3a：骨盆左右倾斜
-            '3a': {
-                'name': '骨盆左右倾斜',
-                'original_event': '开始沉髋',
-                'target_event': '沉髋结束',
-                'sensor_indices': [4, 5]  # 对应sensor5, sensor6的索引
-            },
-            # 阶段3b：肩部左右倾斜
-            '3b': {
-                'name': '肩部左右倾斜',
-                'original_event': '开始沉肩',
-                'target_event': '沉肩结束',
-                'sensor_indices': [6, 7]  # 对应sensor7, sensor8的索引
-            }
-        }
-        
-        # 【新增】动态阶段映射配置
-        self.dynamic_stage_mapping = {
-            # 阶段1：骨盆前后翻转 - 总是使用前两个传感器
-            1: {
-                'name': '骨盆前后翻转',
-                'original_event': '开始训练',
-                'target_event': '完成阶段',
-                'sensor_indices': [0, 1]  # 总是使用sensor1, sensor2
-            },
-            # 阶段2：脊柱曲率矫正 - 使用第3、4个传感器（如果存在）
-            2: {
-                'name': '脊柱曲率矫正', 
-                'original_event': '开始矫正',
-                'target_event': '矫正完成',
-                'sensor_indices': [2, 3]  # 使用sensor3, sensor4
-            },
-            # 阶段3a：骨盆左右倾斜 - 使用第5、6个传感器（如果存在）
-            '3a': {
-                'name': '骨盆左右倾斜',
-                'original_event': '开始沉髋',
-                'target_event': '沉髋结束',
-                'sensor_indices': [4, 5]  # 使用sensor5, sensor6
-            },
-            # 阶段3b：肩部左右倾斜 - 使用第7、8个传感器（如果存在）
-            '3b': {
-                'name': '肩部左右倾斜',
-                'original_event': '开始沉肩',
-                'target_event': '沉肩结束',
-                'sensor_indices': [6, 7]  # 使用sensor7, sensor8
-            }
-        }
     
     def _init_ui(self):
         """初始化用户界面"""
@@ -939,6 +941,14 @@ class SensorMonitorMainWindow(QMainWindow):
             
         self.control_panel.events_path_changed.connect(on_events_path_changed)
 
+        # 【新增】初始化时立即推进一次当前事件路径，确保事件记录器拿到默认路径
+        try:
+            current_events_path = self.control_panel.get_events_save_path()
+            if current_events_path:
+                on_events_path_changed(current_events_path)
+        except Exception as _e:
+            print(f"初始化事件路径传播失败: {_e}")
+
         # 【新增】连接tab2阶段控制模块的按钮信号
         self._connect_stage_control_signals()
 
@@ -1016,8 +1026,6 @@ class SensorMonitorMainWindow(QMainWindow):
             print(f"\n=== 更新tab2传感器数量 ===")
             print(f"新的传感器数量: {count}")
             
-            # 【新增】首先更新阶段映射配置
-            self.update_stage_mapping_for_sensor_count(count)
             
             # 获取tab2的积木可视化组件
             blocks_tab = self.blocks_manager.get_tab_widget()
@@ -1043,70 +1051,9 @@ class SensorMonitorMainWindow(QMainWindow):
             import traceback
             traceback.print_exc()
 
-    def update_stage_mapping_for_sensor_count(self, sensor_count):
-        """根据传感器数量动态更新阶段映射配置"""
-        try:
-            print(f"\n=== 更新阶段映射配置 ===")
-            print(f"传感器数量: {sensor_count}")
-            
-            # 创建新的动态映射
-            new_mapping = {}
-            
-            # 阶段1：骨盆前后翻转 - 总是使用前两个传感器
-            if sensor_count >= 2:
-                new_mapping[1] = {
-                    'name': '骨盆前后翻转',
-                    'original_event': '开始训练',
-                    'target_event': '完成阶段',
-                    'sensor_indices': [0, 1]
-                }
-                print("  ✓ 阶段1: 骨盆前后翻转 - 传感器[0,1]")
-            
-            # 阶段2：脊柱曲率矫正 - 使用第3、4个传感器（如果存在）
-            if sensor_count >= 4:
-                new_mapping[2] = {
-                    'name': '脊柱曲率矫正',
-                    'original_event': '开始矫正',
-                    'target_event': '矫正完成',
-                    'sensor_indices': [2, 3]
-                }
-                print("  ✓ 阶段2: 脊柱曲率矫正 - 传感器[2,3]")
-            
-            # 阶段3a：骨盆左右倾斜 - 使用第5、6个传感器（如果存在）
-            if sensor_count >= 6:
-                new_mapping['3a'] = {
-                    'name': '骨盆左右倾斜',
-                    'original_event': '开始沉髋',
-                    'target_event': '沉髋结束',
-                    'sensor_indices': [4, 5]
-                }
-                print("  ✓ 阶段3a: 骨盆左右倾斜 - 传感器[4,5]")
-            
-            # 阶段3b：肩部左右倾斜 - 使用第7、8个传感器（如果存在）
-            if sensor_count >= 8:
-                new_mapping['3b'] = {
-                    'name': '肩部左右倾斜',
-                    'original_event': '开始沉肩',
-                    'target_event': '沉肩结束',
-                    'sensor_indices': [6, 7]
-                }
-                print("  ✓ 阶段3b: 肩部左右倾斜 - 传感器[6,7]")
-            
-            # 更新阶段映射
-            self.stage_sensor_mapping = new_mapping
-            print(f"阶段映射更新完成，共 {len(new_mapping)} 个阶段")
-            
-            return new_mapping
-            
-        except Exception as e:
-            print(f"更新阶段映射配置时出错: {e}")
-            import traceback
-            traceback.print_exc()
-            return {}
 
     def _find_all_sensor_selectors(self, parent_widget):
         """递归查找所有SensorSelector组件"""
-        
         
         selectors = []
         
@@ -1303,14 +1250,14 @@ class SensorMonitorMainWindow(QMainWindow):
             # 方法1：如果blocks_tab有具体的按钮属性
             button_mappings = [
                 # (按钮属性名, 事件名称, 阶段键)
-                ('start_training_btn', '开始训练', 1),
-                ('complete_stage_btn', '完成阶段', 1),
-                ('start_correction_btn', '开始矫正', 2),
-                ('complete_correction_btn', '矫正完成', 2),
+                ('start_training_btn', '开始训练', '1'),
+                ('complete_stage_btn', '完成阶段', '1'),
+                ('start_correction_btn', '开始矫正', '2'),
+                ('complete_correction_btn', '矫正完成', '2'),
                 ('start_hip_btn', '开始沉髋', '3a'),
-                ('end_hip_btn', '沉髋结束', '3a'),
+                ('end_hip_btn', '沉髋完成', '3a'),
                 ('start_shoulder_btn', '开始沉肩', '3b'),
-                ('end_shoulder_btn', '沉肩结束', '3b'),
+                ('end_shoulder_btn', '沉肩完成', '3b'),
             ]
             
             connected_count = 0
@@ -1322,7 +1269,7 @@ class SensorMonitorMainWindow(QMainWindow):
                             lambda checked, en=event_name, sk=stage_key: self.on_stage_button_clicked(en, sk)
                         )
                         connected_count += 1
-                        print(f"已连接按钮: {btn_attr} -> {event_name}")
+                        # print(f"已连接按钮: {btn_attr} -> {event_name}")
             
             # 方法2：如果blocks_tab有阶段控制组件
             if hasattr(blocks_tab, 'stage_control'):
@@ -1432,7 +1379,7 @@ class SensorMonitorMainWindow(QMainWindow):
             # 记录事件（不包含权重）
             self.event_recorder.record_event(
                 event_name=event_name,
-                stage=f"阶段{stage_key}",
+                stage=format_stage_label(stage_key),
                 additional_data={}  # 空的额外数据
             )
             
@@ -1442,7 +1389,7 @@ class SensorMonitorMainWindow(QMainWindow):
             print(f"记录简单事件时出错: {e}")
 
     def _record_stage_event_with_weights(self, event_name, stage_key, sensor_data, sensor_selector):
-        """记录阶段事件（目标值事件，包含自动分配的权重）"""
+        """记录阶段事件（目标值事件）"""
         try:
             # 获取自动分配后的权重
             weights = sensor_selector.get_weights() if sensor_selector else [0.0] * self.control_panel.get_num_sensors()
@@ -1460,7 +1407,7 @@ class SensorMonitorMainWindow(QMainWindow):
             # 记录事件
             self.event_recorder.record_event(
                 event_name=event_name,
-                stage=f"阶段{stage_key}",
+                stage=format_stage_label(stage_key),
                 additional_data=additional_data
             )
             
@@ -1477,80 +1424,15 @@ class SensorMonitorMainWindow(QMainWindow):
             stage_selectors = {
                 1: self._get_sensor_selector_for_stage(1),
                 2: self._get_sensor_selector_for_stage(2),
+                '2a': self._get_sensor_selector_for_stage('2a'),
+                '2b': self._get_sensor_selector_for_stage('2b'),
                 '3a': self._get_sensor_selector_for_stage('3a'),
                 '3b': self._get_sensor_selector_for_stage('3b')
+                
             }
-            
-            # 为每个阶段创建"保存权重到事件文件"的逻辑
-            for stage_key, selector in stage_selectors.items():
-                if selector:
-                    # 连接权重自动分配完成信号
-                    selector.weights_auto_assigned.connect(
-                        lambda weights, sk=stage_key: self._on_weights_auto_assigned(sk, weights)
-                    )
             
         except Exception as e:
             print(f"添加保存权重功能时出错: {e}")
-
-    def _on_weights_auto_assigned(self, stage_key, weights):
-        """处理权重自动分配完成事件（修改版）"""
-        try:
-            print(f"\n=== 权重分配完成，保存到事件文件 ===")
-            print(f"阶段: {stage_key}")
-            print(f"权重: {[f'{w:.3f}' for w in weights if w > 0]}")
-            
-            # 获取当前传感器数据
-            current_sensor_data = self.event_recorder.get_current_sensor_data()
-            if not current_sensor_data:
-                print("警告: 当前没有传感器数据")
-                return
-            
-            # 获取对应的传感器选择器
-            sensor_selector = self._get_sensor_selector_for_stage(stage_key)
-            if not sensor_selector:
-                print(f"未找到阶段 {stage_key} 的传感器选择器")
-                return
-            
-            # 确定事件名称（使用目标事件名称，如"完成阶段"）
-            stage_mapping = self.stage_sensor_mapping.get(stage_key)
-            if not stage_mapping:
-                print(f"未找到阶段 {stage_key} 的映射配置")
-                return
-            
-            # 使用目标事件名称
-            event_name = stage_mapping['target_event']
-            
-            # 获取误差范围
-            error_range = sensor_selector.get_error_range()
-            
-            # 获取当前权重分配模式
-            weight_mode = sensor_selector.current_weight_mode
-            
-            # 准备额外数据
-            additional_data = {
-                'sensor_weights': weights,
-                'error_range': error_range,
-                'weight_mode': weight_mode,  # 标记是自动分配还是手动分配
-                'auto_assigned': (weight_mode == "auto"),
-                'stage_completed': True  # 标记这是阶段完成事件
-            }
-            
-            # 记录目标值事件（包含权重信息）
-            self.event_recorder.record_event(
-                event_name=event_name,
-                stage=f"阶段{stage_key}",
-                additional_data=additional_data
-            )
-            
-            print(f"目标值事件已记录（包含权重）: {event_name}")
-            print(f"权重模式: {weight_mode}")
-            print(f"权重和: {sum(weights):.6f}")
-            print("=== 权重保存到事件文件完成 ===\n")
-            
-        except Exception as e:
-            print(f"处理权重分配时出错: {e}")
-            import traceback
-            traceback.print_exc()
 
     def _record_stage_event(self, event_name, stage_key, sensor_data, sensor_selector):
         """记录阶段事件（原始值事件）"""
@@ -1570,7 +1452,7 @@ class SensorMonitorMainWindow(QMainWindow):
             # 记录事件
             self.event_recorder.record_event(
                 event_name=event_name,
-                stage=f"阶段{stage_key}",
+                stage=format_stage_label(stage_key),
                 additional_data=additional_data
             )
             
@@ -1589,6 +1471,8 @@ class SensorMonitorMainWindow(QMainWindow):
             stage_selector_mapping = {
                '1': 'gray_rotation',          # 阶段1: 骨盆前后翻转
                '2': 'blue_curvature',         # 阶段2: 脊柱曲率矫正
+               '2a': 'blue_curvature_up',      # 阶段2a: 脊柱曲率矫正（上）
+               '2b': 'blue_curvature_down',    # 阶段2b: 脊柱曲率矫正（下）
                '3a': 'gray_tilt',          # 阶段3a: 骨盆左右倾斜
                '3b': 'green_tilt'          # 阶段3b: 肩部左右倾斜
             }
@@ -2591,14 +2475,19 @@ class SensorMonitorMainWindow(QMainWindow):
                 'events_count': events_count
             })
             
+            # 【新增】事件文件路径提示
+            events_file_path = getattr(self.event_recorder, 'events_file_path', '')
+            if events_file_path:
+                print(f"事件已保存到: {events_file_path}")
+            
             QMessageBox.information(
                 self, "采集完成", 
                 f"数据采集已完成！\n"
                 f"已保存 {stats.get('total_data_count', 0)} 个滤波后数据点到：\n{data_save_path}\n"
                 f"已保存 {stats.get('raw_data_count', 0)} 个原始数据点\n"
-                f"卡尔曼滤波处理：{filter_stats['filtered_count']} 个数据点\n"
                 f"已记录 {events_count} 个事件\n"
-                f"滤波参数：过程噪声={filter_stats['process_noise']:.3f}, 测量噪声={filter_stats['measurement_noise']:.3f}"
+                + (f"事件文件：{events_file_path}\n" if events_file_path else "") 
+
             )
             
         except Exception as e:
@@ -2699,9 +2588,9 @@ class SensorMonitorMainWindow(QMainWindow):
                 self._last_stage_print_time = 0
             if now - self._last_stage_print_time >= 1:
                 all_stage_values = self.spine_data_sender._calculate_all_stage_values(processed_data[1:] if len(processed_data) > 1 else processed_data)
-                print("【所有阶段归一化/驱动参数】")
-                for stage, value in all_stage_values.items():
-                    print(f"  阶段 {stage}: {value:.4f}")
+                # print("【所有阶段归一化/驱动参数】")
+                # for stage, value in all_stage_values.items():
+                #     print(f"  阶段 {stage}: {value:.4f}")
                 self._last_stage_print_time = now
             
             # 统计信息
@@ -2715,7 +2604,7 @@ class SensorMonitorMainWindow(QMainWindow):
                     elif filter_method == 'savitzky_golay':
                         stats['filter'] = self.sg_filter.get_filter_stats()
                     
-                print(f"处理统计: {stats}")
+                # print(f"处理统计: {stats}")
                 
         except Exception as e:
             print(f"处理传感器数据时出错: {e}")
@@ -2869,6 +2758,7 @@ class SensorMonitorMainWindow(QMainWindow):
             print(f"实时界面刷新错误: {e}")
 
 
+
 if __name__ == "__main__":
     try:
         # print("17. 程序开始启动...")
@@ -2896,4 +2786,5 @@ if __name__ == "__main__":
         import traceback
         print("错误堆栈:")
         print(traceback.format_exc())
+        sys.exit(1)
         sys.exit(1)

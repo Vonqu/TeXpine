@@ -1,0 +1,55 @@
+{
+  "stage": 1,
+  "event_name": "完成阶段",
+  "timestamp": 77.889567,
+  "raw_sensor_data": [
+    1754965670.5130022,
+    1754965670.5069814,
+    1498.6455781867471,
+    2040.019920888449,
+    1160.3847097521661,
+    1868.246385095613,
+    1568.0816495544495,
+    1632.154233129576,
+    1094.369204030574,
+    1757.756566998173,
+    1246.8479372606203,
+    188.67136176962458
+  ],
+  "sensor_weights": [
+    0.5,
+    0.5,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "error_range": 0.1,
+  "recorded_at": "2025-08-12T10:27:50.522197",
+  "visualization_state": {
+    "stage": 1,
+    "sensor_count": 10,
+    "gray_rotation": 0.8568732987390824,
+    "gray_tilt": 0.0,
+    "blue_curvature": 1.0,
+    "green_tilt": 0.0,
+    "alerts": {
+      "gray_rotation": false,
+      "gray_tilt": false,
+      "blue_curvature": false,
+      "green_tilt": false
+    },
+    "memory_stats": {
+      "plot_data_points": 1686,
+      "plot_window_size": 5000,
+      "decimation_factor": 1,
+      "memory_usage_mb": 0,
+      "data_points_processed": 2581,
+      "plot_updates_per_sec": 901
+    }
+  }
+}

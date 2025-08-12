@@ -1,0 +1,11 @@
+{
+  "timestamp": "2025-08-12 17:37:47",
+  "stage": "3b",
+  "action": "complete",
+  "spine_type": "C",
+  "spine_direction": "left",
+  "event_name": "完成阶段3b",
+  "recorded_at": "2025-08-12T17:37:47.161886",
+  "sensor_data": [],
+  "sequence_number": 4
+}

@@ -45,7 +45,7 @@ class SavitzkyGolayFilter:
             self.last_filtered_value = filtered_value
             return filtered_value
         except Exception as e:
-            print(f"Savitzky-Golay滤波失败: {e}")
+            # print(f"Savitzky-Golay滤波失败: {e}")
             return measurement
 
     def update_parameters(self, window_length: Optional[int] = None, polyorder: Optional[int] = None):
@@ -80,8 +80,8 @@ class MultiSensorSavitzkyGolayFilter:
         self.filters = [SavitzkyGolayFilter(window_length, polyorder) for _ in range(num_sensors)]
         self.total_filtered_count = 0
         self.start_time = time.time()
-        print(f"多传感器Savitzky-Golay滤波器初始化完成: {num_sensors} 个传感器")
-        print(f"参数: window_length={window_length}, polyorder={polyorder}")
+        # print(f"多传感器Savitzky-Golay滤波器初始化完成: {num_sensors} 个传感器")
+        # print(f"参数: window_length={window_length}, polyorder={polyorder}")
 
     def filter_sensor_data(self, sensor_data: List[float]) -> List[float]:
         if len(sensor_data) != self.num_sensors:
@@ -183,32 +183,32 @@ class MultiSensorSavitzkyGolayFilter:
             quality_metrics['sensor_quality'].append(sensor_quality)
         return quality_metrics
 
-# 测试函数
-def test_sg_filter():
-    print("开始测试Savitzky-Golay滤波器...")
-    filter_sg = MultiSensorSavitzkyGolayFilter(num_sensors=3, window_length=11, polyorder=3)
-    import random
-    test_data = []
-    for i in range(20):
-        timestamp = i * 0.01
-        sensor1 = 2500 + 50 * np.sin(i * 0.5) + random.gauss(0, 10)
-        sensor2 = 2600 + 30 * np.cos(i * 0.3) + random.gauss(0, 8)
-        sensor3 = 2700 + 20 * np.sin(i * 0.7) + random.gauss(0, 12)
-        data_point = [timestamp, sensor1, sensor2, sensor3]
-        test_data.append(data_point)
-    print("原始数据:")
-    for i, data in enumerate(test_data[:5]):
-        print(f"  数据点 {i+1}: {data}")
-    print("\n滤波后数据:")
-    for i, data in enumerate(test_data):
-        filtered_data, raw_data = filter_sg.filter_data_with_timestamp(data)
-        if i < 5:
-            print(f"  数据点 {i+1}: {filtered_data}")
-    stats = filter_sg.get_filter_stats()
-    print(f"\n滤波统计信息:")
-    for key, value in stats.items():
-        print(f"  {key}: {value}")
-    print("Savitzky-Golay滤波器测试完成!")
+# # 测试函数
+# def test_sg_filter():
+#     print("开始测试Savitzky-Golay滤波器...")
+#     filter_sg = MultiSensorSavitzkyGolayFilter(num_sensors=3, window_length=11, polyorder=3)
+#     import random
+#     test_data = []
+#     for i in range(20):
+#         timestamp = i * 0.01
+#         sensor1 = 2500 + 50 * np.sin(i * 0.5) + random.gauss(0, 10)
+#         sensor2 = 2600 + 30 * np.cos(i * 0.3) + random.gauss(0, 8)
+#         sensor3 = 2700 + 20 * np.sin(i * 0.7) + random.gauss(0, 12)
+#         data_point = [timestamp, sensor1, sensor2, sensor3]
+#         test_data.append(data_point)
+#     print("原始数据:")
+#     for i, data in enumerate(test_data[:5]):
+#         print(f"  数据点 {i+1}: {data}")
+#     print("\n滤波后数据:")
+#     for i, data in enumerate(test_data):
+#         filtered_data, raw_data = filter_sg.filter_data_with_timestamp(data)
+#         if i < 5:
+#             print(f"  数据点 {i+1}: {filtered_data}")
+#     stats = filter_sg.get_filter_stats()
+#     print(f"\n滤波统计信息:")
+#     for key, value in stats.items():
+#         print(f"  {key}: {value}")
+#     print("Savitzky-Golay滤波器测试完成!")
 
-if __name__ == "__main__":
-    test_sg_filter() 
+# if __name__ == "__main__":
+#     test_sg_filter() 

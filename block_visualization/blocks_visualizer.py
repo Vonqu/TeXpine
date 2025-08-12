@@ -9,12 +9,19 @@ class BlocksVisualizer(QWidget):
         self.setMinimumSize(400, 400)
         self.gray_block_rotation = 0
         self.gray_block_tilt = 0
+        # C 型：单段曲率；S 型：分段曲率（上/下）
         self.blue_blocks_curvature = 0
+        self.blue_blocks_curvature_up = 0
+        self.blue_blocks_curvature_down = 0
         self.green_block_tilt = 0
         self.gray_rotation_alert = False
         self.gray_tilt_alert = False
         self.blue_curvature_alert = False
         self.green_tilt_alert = False
+        # C 或 S（默认 C）
+        self.spine_type = 'C'
+        # 方向：C型使用 'left'/'right'，S型使用 'lumbar_left'/'lumbar_right'
+        self.spine_direction = 'left'
         self.setAutoFillBackground(True)
         palette = self.palette()
         palette.setColor(self.backgroundRole(), QColor(50, 50, 50))
@@ -61,34 +68,80 @@ class BlocksVisualizer(QWidget):
             painter.setBrush(QColor(0, 240, 0))
         painter.drawRect(-int(green_width/2), -int(green_height/2), int(green_width), int(green_height))
         painter.restore()
-        # 贝塞尔曲线分布蓝色方块
-        num_blocks = 7
+        # 贝塞尔曲线分布蓝色方块（C: 单段；S: 两段反向拼接）
+        num_blocks = 10
         blue_height = height * 0.04
         blue_width = width * 0.15
-        # 起点P0（灰色方块中心）
         P0 = np.array([width/2, gray_y + gray_height/2])
-        # 终点P2（绿色方块中心）
         P2 = np.array([width/2, green_y + green_height/2])
-        # 控制点P1：P0和P2中点加法向量，t控制弯曲
-        mid = (P0 + P2) / 2
-        # 法向量（垂直于P2-P0，向右）
         direction = P2 - P0
         normal = np.array([direction[1], -direction[0]])
         normal = normal / (np.linalg.norm(normal) + 1e-6)
-        t = self.blue_blocks_curvature  # 0~1
-        P1 = mid + normal * t * (height * 0.25)  # 弯曲幅度
-        for i in range(num_blocks):
-            painter.save()
-            s = (i+1)/(num_blocks+1)  # 均匀分布
-            # 二次贝塞尔插值
-            pos = (1-s)**2 * P0 + 2*(1-s)*s*P1 + s**2*P2
-            painter.translate(pos[0], pos[1])
-            if self.blue_curvature_alert:
-                painter.setBrush(QColor(255, 100, 100))
+
+        # 根据选择的方向翻转法向量
+        dir_key = str(getattr(self, 'spine_direction', 'left'))
+        s_type = str(getattr(self, 'spine_type', 'C')).upper()
+        # C型: left=默认(不翻转), right=翻转
+        # S型: lumbar_left=下段向左(默认), 上段向右；lumbar_right=下段向右(翻转), 上段向左
+        flip_for_c = (s_type != 'S') and (dir_key == 'right')
+        flip_for_s_down = (s_type == 'S') and (dir_key == 'lumbar_right')
+        flip_for_s_up = (s_type == 'S') and (dir_key == 'lumbar_left')  # 上段与下段相反
+
+        amplitude = height * 0.25
+
+        if str(getattr(self, 'spine_type', 'C')).upper() == 'S':
+            # S 型：两段反向 C 曲线
+            Pm = (P0 + P2) / 2
+            # 为每个半段使用自身中点，曲率方向相反
+            mid_lower = (P0 + Pm) / 2
+            mid_upper = (Pm + P2) / 2
+            t_down = max(0.0, min(1.0, float(self.blue_blocks_curvature_down)))
+            t_up = max(0.0, min(1.0, float(self.blue_blocks_curvature_up)))
+            # 下半段/上半段根据方向设置法向量（lumbar_left: 下左上右；lumbar_right: 下右上左）
+            if dir_key == 'lumbar_left':
+                effective_normal_down = normal
+                effective_normal_up = -normal
             else:
-                painter.setBrush(QColor(50, 100, 240))
-            painter.drawRect(-int(blue_width/2), -int(blue_height/2), int(blue_width), int(blue_height))
-            painter.restore()
+                effective_normal_down = -normal
+                effective_normal_up = normal
+            L1 = mid_lower + effective_normal_down * t_down * amplitude
+            U1 = mid_upper + effective_normal_up * t_up * amplitude
+            lower_count, upper_count = 5, 5
+
+            # 下半段 P0 -> Pm
+            for i in range(lower_count):
+                painter.save()
+                s = (i + 1) / (lower_count + 1)
+                pos = (1 - s) ** 2 * P0 + 2 * (1 - s) * s * L1 + s ** 2 * Pm
+                painter.translate(pos[0], pos[1])
+                painter.setBrush(QColor(255, 100, 100) if self.blue_curvature_alert else QColor(50, 100, 240))
+                painter.drawRect(-int(blue_width/2), -int(blue_height/2), int(blue_width), int(blue_height))
+                painter.restore()
+
+            # 上半段 Pm -> P2
+            for i in range(upper_count):
+                painter.save()
+                s = (i + 1) / (upper_count + 1)
+                pos = (1 - s) ** 2 * Pm + 2 * (1 - s) * s * U1 + s ** 2 * P2
+                painter.translate(pos[0], pos[1])
+                painter.setBrush(QColor(255, 100, 100) if self.blue_curvature_alert else QColor(50, 100, 240))
+                painter.drawRect(-int(blue_width/2), -int(blue_height/2), int(blue_width), int(blue_height))
+                painter.restore()
+        else:
+            # C 型：单段二次贝塞尔
+            mid = (P0 + P2) / 2
+            t = max(0.0, min(1.0, float(self.blue_blocks_curvature)))
+            # C型方向翻转
+            effective_normal = (-normal if flip_for_c else normal)
+            P1 = mid + effective_normal * t * amplitude
+            for i in range(num_blocks):
+                painter.save()
+                s = (i+1)/(num_blocks+1)
+                pos = (1-s)**2 * P0 + 2*(1-s)*s*P1 + s**2*P2
+                painter.translate(pos[0], pos[1])
+                painter.setBrush(QColor(255, 100, 100) if self.blue_curvature_alert else QColor(50, 100, 240))
+                painter.drawRect(-int(blue_width/2), -int(blue_height/2), int(blue_width), int(blue_height))
+                painter.restore()
 
     def update_blue_blocks_curvature(self, t):
         """根据t值更新蓝色方块的曲率，t由第二阶段的加权结果控制"""
@@ -109,4 +162,4 @@ class BlocksVisualizer(QWidget):
             self.correct_label.setStyleSheet("font-size: 18px; color: green; font-weight: bold;")
         else:
             self.correct_label.setText("当前动作：不正确")
-            self.correct_label.setStyleSheet("font-size: 18px; color: red; font-weight: bold;") 
+            self.correct_label.setStyleSheet("font-size: 18px; color: red; font-weight: bold;")

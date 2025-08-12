@@ -59,13 +59,13 @@ class BlocksTabManager(QObject):
         self.parent_window = None  # 用于存储主窗口引用
         
         # ====== 创建核心组件 ======
-        print("BlocksTabManager: 开始初始化积木可视化组件...")
+        # print("BlocksTabManager: 开始初始化积木可视化组件...")
         self._create_components()
-        print("BlocksTabManager: 积木可视化组件初始化完成")
+        # print("BlocksTabManager: 积木可视化组件初始化完成")
         
         # ====== 建立内部信号连接 ======
         self._connect_internal_signals()
-        print("BlocksTabManager: 内部信号连接完成")
+        # print("BlocksTabManager: 内部信号连接完成")
         
     def _create_components(self):
         """
@@ -75,7 +75,7 @@ class BlocksTabManager(QObject):
         try:
             # 创建积木可视化主标签页
             self.blocks_tab = BlocksTab(sensor_count=self.sensor_count)
-            print("BlocksTabManager: BlocksTab 创建成功")
+            # print("BlocksTabManager: BlocksTab 创建成功")
             
         except Exception as e:
             print(f"BlocksTabManager: 创建组件时发生错误: {e}")

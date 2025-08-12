@@ -75,7 +75,7 @@ class ButterworthFilter:
             # 初始化状态变量
             self.zi = signal.lfilter_zi(self.b, self.a)
             
-            print(f"Butterworth滤波器已更新: 截止频率={self.cutoff_freq}Hz, 阶数={self.order}, 类型={self.btype}")
+            # print(f"Butterworth滤波器已更新: 截止频率={self.cutoff_freq}Hz, 阶数={self.order}, 类型={self.btype}")
             
         except Exception as e:
             print(f"更新滤波器系数失败: {e}")
@@ -122,7 +122,7 @@ class ButterworthFilter:
             return filtered_value
             
         except Exception as e:
-            print(f"Butterworth滤波失败: {e}")
+            # print(f"Butterworth滤波失败: {e}")
             # 返回原始值作为备用
             return measurement
     
@@ -206,8 +206,8 @@ class MultiSensorButterworthFilter:
         self.total_filtered_count = 0
         self.start_time = time.time()
         
-        print(f"多传感器Butterworth滤波器初始化完成: {num_sensors} 个传感器")
-        print(f"参数: 截止频率={cutoff_freq}Hz, 采样频率={fs}Hz, 阶数={order}, 类型={btype}")
+        # print(f"多传感器Butterworth滤波器初始化完成: {num_sensors} 个传感器")
+        # print(f"参数: 截止频率={cutoff_freq}Hz, 采样频率={fs}Hz, 阶数={order}, 类型={btype}")
     
     def filter_sensor_data(self, sensor_data: List[float]) -> List[float]:
         """
@@ -220,7 +220,7 @@ class MultiSensorButterworthFilter:
             List[float]: 滤波后的传感器数据
         """
         if len(sensor_data) != self.num_sensors:
-            print(f"警告：传感器数据长度 {len(sensor_data)} 与预期 {self.num_sensors} 不匹配")
+            # print(f"警告：传感器数据长度 {len(sensor_data)} 与预期 {self.num_sensors} 不匹配")
             # 调整数据长度
             if len(sensor_data) < self.num_sensors:
                 # 数据不足，用最后一个值填充
@@ -254,7 +254,7 @@ class MultiSensorButterworthFilter:
             Tuple[List[float], List[float]]: (滤波后数据, 原始数据)
         """
         if len(data) < 2:
-            print("警告：数据长度不足，无法进行滤波")
+            # print("警告：数据长度不足，无法进行滤波")
             return data, data
         
         # 分离时间戳和传感器数据
@@ -296,8 +296,8 @@ class MultiSensorButterworthFilter:
         for filter_bw in self.filters:
             filter_bw.update_parameters(cutoff_freq, fs, order, btype)
         
-        print(f"Butterworth滤波器参数已更新: 截止频率={self.cutoff_freq}Hz, "
-              f"采样频率={self.fs}Hz, 阶数={self.order}, 类型={self.btype}")
+        # print(f"Butterworth滤波器参数已更新: 截止频率={self.cutoff_freq}Hz, "
+            #   f"采样频率={self.fs}Hz, 阶数={self.order}, 类型={self.btype}")
     
     def reset_filters(self):
         """重置所有滤波器"""
@@ -369,7 +369,7 @@ class MultiSensorButterworthFilter:
             self.num_sensors = num_sensors
             self.filters = [ButterworthFilter(self.cutoff_freq, self.fs, self.order, self.btype) 
                            for _ in range(num_sensors)]
-            print(f"传感器数量已更新为: {num_sensors}")
+            # print(f"传感器数量已更新为: {num_sensors}")
     
     def get_filter_quality_metrics(self) -> Dict:
         """
@@ -404,53 +404,53 @@ class MultiSensorButterworthFilter:
         return quality_metrics
 
 
-# 测试函数
-def test_butterworth_filter():
-    """测试Butterworth滤波器功能"""
-    print("开始测试Butterworth滤波器...")
+# # 测试函数
+# def test_butterworth_filter():
+#     """测试Butterworth滤波器功能"""
+#     print("开始测试Butterworth滤波器...")
     
-    # 创建多传感器滤波器
-    filter_bw = MultiSensorButterworthFilter(
-        num_sensors=3, 
-        cutoff_freq=2.0, 
-        fs=100.0, 
-        order=4, 
-        btype='low'
-    )
+#     # 创建多传感器滤波器
+#     filter_bw = MultiSensorButterworthFilter(
+#         num_sensors=3, 
+#         cutoff_freq=2.0, 
+#         fs=100.0, 
+#         order=4, 
+#         btype='low'
+#     )
     
-    # 模拟带噪声的传感器数据
-    import random
+#     # 模拟带噪声的传感器数据
+#     import random
     
-    # 生成测试数据
-    test_data = []
-    for i in range(20):  # 增加测试数据点数量
-        # 模拟时间戳和3个传感器数据
-        timestamp = i * 0.01  # 10ms采样间隔
-        sensor1 = 2500 + 50 * np.sin(i * 0.5) + random.gauss(0, 10)  # 正弦波 + 噪声
-        sensor2 = 2600 + 30 * np.cos(i * 0.3) + random.gauss(0, 8)   # 余弦波 + 噪声
-        sensor3 = 2700 + 20 * np.sin(i * 0.7) + random.gauss(0, 12)  # 另一个正弦波 + 噪声
+#     # 生成测试数据
+#     test_data = []
+#     for i in range(20):  # 增加测试数据点数量
+#         # 模拟时间戳和3个传感器数据
+#         timestamp = i * 0.01  # 10ms采样间隔
+#         sensor1 = 2500 + 50 * np.sin(i * 0.5) + random.gauss(0, 10)  # 正弦波 + 噪声
+#         sensor2 = 2600 + 30 * np.cos(i * 0.3) + random.gauss(0, 8)   # 余弦波 + 噪声
+#         sensor3 = 2700 + 20 * np.sin(i * 0.7) + random.gauss(0, 12)  # 另一个正弦波 + 噪声
         
-        data_point = [timestamp, sensor1, sensor2, sensor3]
-        test_data.append(data_point)
+#         data_point = [timestamp, sensor1, sensor2, sensor3]
+#         test_data.append(data_point)
     
-    print("原始数据:")
-    for i, data in enumerate(test_data[:5]):  # 只显示前5个
-        print(f"  数据点 {i+1}: {data}")
+#     print("原始数据:")
+#     for i, data in enumerate(test_data[:5]):  # 只显示前5个
+#         print(f"  数据点 {i+1}: {data}")
     
-    print("\n滤波后数据:")
-    for i, data in enumerate(test_data):
-        filtered_data, raw_data = filter_bw.filter_data_with_timestamp(data)
-        if i < 5:  # 只显示前5个
-            print(f"  数据点 {i+1}: {filtered_data}")
+#     print("\n滤波后数据:")
+#     for i, data in enumerate(test_data):
+#         filtered_data, raw_data = filter_bw.filter_data_with_timestamp(data)
+#         if i < 5:  # 只显示前5个
+#             print(f"  数据点 {i+1}: {filtered_data}")
     
-    # 显示统计信息
-    stats = filter_bw.get_filter_stats()
-    print(f"\n滤波统计信息:")
-    for key, value in stats.items():
-        print(f"  {key}: {value}")
+#     # 显示统计信息
+#     stats = filter_bw.get_filter_stats()
+#     print(f"\n滤波统计信息:")
+#     for key, value in stats.items():
+#         print(f"  {key}: {value}")
     
-    print("Butterworth滤波器测试完成!")
+#     print("Butterworth滤波器测试完成!")
 
 
-if __name__ == "__main__":
-    test_butterworth_filter() 
+# if __name__ == "__main__":
+#     test_butterworth_filter() 

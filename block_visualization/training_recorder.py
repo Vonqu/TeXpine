@@ -47,7 +47,7 @@ class TrainingRecorder(QWidget):
         
         # 记录显示区域
         self.record_display = QTextEdit()
-        self.record_display.setMaximumHeight(200)
+        self.record_display.setMaximumHeight(500)
         self.record_display.setStyleSheet("""
             QTextEdit {
                 background-color: #f5f5f5;
@@ -162,7 +162,7 @@ class TrainingRecorder(QWidget):
                 
                 # 显示原始传感器数据
                 if 'raw_sensor_data' in data and data['raw_sensor_data']:
-                    sensor_data = data['raw_sensor_data'][1:] if len(data['raw_sensor_data']) > 1 else data['raw_sensor_data']
+                    sensor_data = self._strip_timestamp_if_present(data['raw_sensor_data'])
                     display_text += f"  📊 原始数据: {[f'{x:.0f}' for x in sensor_data]}\n"
                 
                 # 显示权重信息
@@ -246,7 +246,7 @@ class TrainingRecorder(QWidget):
             if not raw_sensor_data or not sensor_weights:
                 return result_text
                 
-            sensor_data = raw_sensor_data[1:] if len(raw_sensor_data) > 1 else raw_sensor_data
+            sensor_data = self._strip_timestamp_if_present(raw_sensor_data)
             
             # 使用真实的校准数据计算归一化值
             if calibration_data and 'normalized_values' in calibration_data:
@@ -342,16 +342,19 @@ class TrainingRecorder(QWidget):
         except Exception as e:
             print(f"TrainingRecorder: 保存标准文件时出错 - {e}")
     
-    def save_records(self):
-        """保存所有记录到Excel文件"""
+    def save_records(self, export_path=None):
+        """保存所有记录到Excel文件，可选自定义导出路径"""
         try:
             if not self.records:
                 print("TrainingRecorder: 没有记录可保存")
                 return
             
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"training_records_{timestamp}.xlsx"
-            filepath = os.path.join(self.save_directory, filename)
+            if export_path:
+                filepath = export_path
+            else:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"training_records_{timestamp}.xlsx"
+                filepath = os.path.join(self.save_directory, filename)
             
             # 准备数据
             records_data = []
@@ -367,9 +370,9 @@ class TrainingRecorder(QWidget):
                 }
                 
                 # 添加传感器数据
-                sensor_data = data.get('raw_sensor_data', [])
-                if sensor_data and len(sensor_data) > 1:
-                    for i, value in enumerate(sensor_data[1:], 1):
+                sensor_data = self._strip_timestamp_if_present(data.get('raw_sensor_data', []))
+                if sensor_data:
+                    for i, value in enumerate(sensor_data, 1):
                         record_row[f'sensor_{i}'] = value
                 
                 # 添加权重数据
@@ -393,11 +396,13 @@ class TrainingRecorder(QWidget):
                     sheet_name = f'阶段{stage}'
                     stage_df.to_excel(writer, sheet_name=sheet_name, index=False)
             
-            print(f"TrainingRecorder: 已保存记录到 {filename}")
+            print(f"TrainingRecorder: 已保存记录到 {filepath}")
             print(f"TrainingRecorder: 共保存 {len(records_data)} 条记录")
+            return filepath
             
         except Exception as e:
             print(f"TrainingRecorder: 保存记录时出错 - {e}")
+            return None
     
     def clear_records(self):
         """清空所有记录"""
@@ -552,3 +557,14 @@ class TrainingRecorder(QWidget):
         except Exception as e:
             print(f"导出训练记录失败: {e}")
             return None
+
+    def _strip_timestamp_if_present(self, data):
+        """如果首元素像时间戳则去除，否则原样返回"""
+        try:
+            if isinstance(data, (list, tuple)) and len(data) > 0:
+                first = data[0]
+                if isinstance(first, (int, float)) and first > 1e8:
+                    return list(data[1:])
+            return list(data) if isinstance(data, (list, tuple)) else data
+        except Exception:
+            return data

@@ -1,0 +1,53 @@
+{
+  "stage": 2,
+  "event_name": "矫正完成",
+  "timestamp": 31.379138,
+  "raw_sensor_data": [
+    1504.8283608579413,
+    1663.1251100578313,
+    1692.605563846885,
+    1508.4536548381918,
+    2016.1595509073688,
+    1625.6439514152917,
+    1120.9025765118554,
+    1534.9999999391891,
+    1265.5377624184339,
+    109.22545259213055
+  ],
+  "sensor_weights": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "error_range": 0.1,
+  "recorded_at": "2025-08-12T10:42:59.556596",
+  "visualization_state": {
+    "stage": 2,
+    "sensor_count": 10,
+    "gray_rotation": 1.0,
+    "gray_tilt": 0.0,
+    "blue_curvature": 0.9978413685266336,
+    "green_tilt": 0.0,
+    "alerts": {
+      "gray_rotation": false,
+      "gray_tilt": false,
+      "blue_curvature": false,
+      "green_tilt": false
+    },
+    "memory_stats": {
+      "plot_data_points": 679,
+      "plot_window_size": 5000,
+      "decimation_factor": 1,
+      "memory_usage_mb": 0,
+      "data_points_processed": 665,
+      "plot_updates_per_sec": 228
+    }
+  }
+}

@@ -44,27 +44,45 @@ class EventRecorder(QObject):
         """设置事件文件保存路径"""
         self.events_file_path = file_path
         self.is_new_acquisition = True  # 新路径时标记为新采集
+        # 确保目录存在
+        try:
+            directory = os.path.dirname(self.events_file_path)
+            if directory and not os.path.exists(directory):
+                os.makedirs(directory, exist_ok=True)
+        except Exception as _e:
+            print(f"创建事件文件目录失败: {self.events_file_path}, 错误: {_e}")
         print(f"事件文件路径已设置: {file_path}")
         
     def set_num_sensors(self, num_sensors):
         """设置传感器数量"""
-        old_num = self.num_sensors
+        # old_num = self.num_sensors
         self.num_sensors = num_sensors
-        print(f"事件记录器传感器数量已设置为: {num_sensors} (原来是: {old_num})")
+        # print(f"事件记录器传感器数量已设置为: {num_sensors} (原来是: {old_num})")
         
-        # 如果传感器数量发生变化且已经开始采集，标记需要重新创建文件头
-        if old_num != num_sensors and hasattr(self, 'acquisition_start_time') and self.acquisition_start_time:
-            print(f"传感器数量变化，下次记录事件时将更新文件格式")
+        # # 如果传感器数量发生变化且已经开始采集，标记需要重新创建文件头
+        # if old_num != num_sensors and hasattr(self, 'acquisition_start_time') and self.acquisition_start_time:
+        #     print(f"传感器数量变化，下次记录事件时将更新文件格式")
         
     def set_current_sensor_data(self, sensor_data, processed_data=None):
         """设置当前传感器数据（同时保存原始数据和处理后数据）"""
         # 检查数据是否包含时间戳
         if isinstance(sensor_data, (list, tuple)) and len(sensor_data) > 0:
-            # 如果第一个元素是时间戳（通常是一个很小的数），则移除它
-            if isinstance(sensor_data[0], (int, float)) and sensor_data[0] < 100:
-                sensor_data = sensor_data[1:]
-                if processed_data is not None and len(processed_data) > 0:
-                    processed_data = processed_data[1:]
+            # 如果第一个元素是时间戳（通常为 epoch 秒，远大于 1e8），则移除它
+            try:
+                first = sensor_data[0]
+                if isinstance(first, (int, float)) and (
+                    first > 1e8 or len(sensor_data) == self.num_sensors + 1
+                ):
+                    sensor_data = sensor_data[1:]
+                    if processed_data is not None and isinstance(processed_data, (list, tuple)) and len(processed_data) > 0:
+                        # 若处理后数据同样包含时间戳，保持一致去除
+                        p_first = processed_data[0]
+                        if isinstance(p_first, (int, float)) and (
+                            p_first > 1e8 or len(processed_data) == self.num_sensors + 1
+                        ):
+                            processed_data = processed_data[1:]
+            except Exception:
+                pass
 
         self.current_sensor_data = sensor_data
         if processed_data is not None:
@@ -151,10 +169,10 @@ class EventRecorder(QObject):
                 print(f"记录时间: {time_info['absolute_time']}")
                 print(f"相对时间: {time_info['relative_timestamp']:.2f}秒")
                 print(f"训练时长: {time_info['elapsed_minutes']:.2f}分钟")
-                print(f"传感器数据:")
+                # print(f"传感器数据:")
                 sensor_data = event_data.get('processed_sensor_data', event_data.get('raw_sensor_data', []))
-                for i, value in enumerate(sensor_data[:10], 1):  # 只显示前10个传感器
-                    print(f"  传感器{i}: {value:.2f}")
+                # for i, value in enumerate(sensor_data[:10], 1):  # 只显示前10个传感器
+                #     print(f"  传感器{i}: {value:.2f}")
                 if additional_data:
                     print("附加数据:")
                     for key, value in additional_data.items():
@@ -206,6 +224,11 @@ class EventRecorder(QObject):
     def _write_to_csv(self, event_data):
         """写入CSV文件（支持误差范围）"""
         try:
+            # 确保目录存在
+            directory = os.path.dirname(self.events_file_path)
+            if directory and not os.path.exists(directory):
+                os.makedirs(directory, exist_ok=True)
+            
             # 检查文件是否存在
             file_exists = os.path.exists(self.events_file_path)
             
@@ -220,7 +243,7 @@ class EventRecorder(QObject):
             
             with open(self.events_file_path, mode, newline='', encoding='utf-8') as csvfile:
                 # 准备列名（与数据文件格式一致，新增误差范围列）
-                fieldnames = ['time(s)', 'event_name', 'stage']
+                fieldnames = ['time(s)', 'event_name', 'event_code', 'stage']
                 
                 # 为每个传感器添加一列
                 # 添加传感器数据列（从1开始编号）
@@ -251,6 +274,7 @@ class EventRecorder(QObject):
                 csv_row = {
                     'time(s)': event_data['timestamp'],  # 不进行格式化，保持原始精度
                     'event_name': event_data['event_name'],
+                    'event_code': event_data.get('event_code', ''),
                     'stage': event_data.get('stage', '')
                 }
                 
@@ -261,7 +285,7 @@ class EventRecorder(QObject):
                 # 写入传感器数据
                 for i in range(1, self.num_sensors + 1):
                     idx = i - 1  # 数组索引从0开始
-                    if i < len(sensor_data):
+                    if idx < len(sensor_data):
                         csv_row[f'sensor{i}'] = sensor_data[idx]
                     else:
                         csv_row[f'sensor{i}'] = ""
@@ -369,6 +393,8 @@ class EventRecorder(QObject):
                 stage_num = 2
             elif '阶段3' in stage:
                 stage_num = 3
+            elif '阶段4' in stage:
+                stage_num = 4
             
             if stage_num and error_range:
                 try:

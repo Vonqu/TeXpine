@@ -143,7 +143,8 @@ class PatientBlocksTab(QWidget):
         # ====== 新增：脊柱类型和方向配置 ======
         self.spine_type = "C"  # 默认C型
         self.spine_direction = "left"  # 默认左凸
-        self.max_stages = 5 if self.spine_type=='S' else 4  # 根据脊柱类型调整
+        # self.max_stages = 5 if self.spine_type=='S' else 4  # 根据脊柱类型调整
+        self.max_stages = 4  # 统一 4 个阶段
         
         # ====== 阶段配置字典 ======
         self.stage_configs = {
@@ -156,20 +157,17 @@ class PatientBlocksTab(QWidget):
     3: "阶段3：骨盆左右倾斜",
     4: "阶段4：肩部左右倾斜"
 }
-,
-                "sub_stages": {
-                    3: ['hip', 'shoulder']  # 阶段3有两个子阶段
-                }
+
+                
             },
             
 "S": {
-    "max_stages": 5,
+    "max_stages": 4,
     "stage_descriptions": {
         1: "阶段1：骨盆前后翻转",
-        2: "阶段2A：上胸段曲率矫正",
-        3: "阶段2B：腰段曲率矫正",
-        4: "阶段3：骨盆左右倾斜",
-        5: "阶段4：肩部左右倾斜"
+        2: "阶段2：脊柱曲率矫正(胸/腰)",
+        3: "阶段3：骨盆左右倾斜",
+        4: "阶段4：肩部左右倾斜"
     },
     "sub_stages": {}
 }
@@ -349,7 +347,7 @@ class PatientBlocksTab(QWidget):
             self.spine_direction = "left"
         elif button == self.s_type_radio:
             self.spine_type = "S"
-            self.max_stages = 5  # 修复：S型应该是5阶段
+            self.max_stages = 4  # 修复：S型应该是5阶段
             # 显示S型方向选择，隐藏C型
             self.c_direction_widget.hide()
             self.s_direction_widget.show()
@@ -521,7 +519,7 @@ class PatientBlocksTab(QWidget):
         
         def _build_module_configs():
             if getattr(self, 'spine_type', 'C') == 'S':
-                self.max_stages = 5
+                # S型
                 return [
                     ('gray_rotation', '骨盆前后反转', 0, 0),
                     ('blue_curvature_up', '脊柱曲率矫正·胸段', 0, 1),
@@ -530,7 +528,7 @@ class PatientBlocksTab(QWidget):
                     ('green_tilt', '肩部左右倾斜', 2, 0),
                 ]
             else:
-                self.max_stages = 4
+                # C型
                 return [
                     ('gray_rotation', '骨盆前后反转', 0, 0),
                     ('blue_curvature', '脊柱曲率矫正', 0, 1),
@@ -753,23 +751,29 @@ class PatientBlocksTab(QWidget):
                     fieldnames=headers
                 )
                 
-                # 定义事件映射关系
+                # 定义事件映射关系（统一且唯一的阶段标签）
                 event_mappings = {
                     # 阶段1 -> 骨盆前后翻转
                     ("阶段1", "开始训练"): ('gray_rotation', 'original'),
                     ("阶段1", "完成阶段"): ('gray_rotation', 'target'),
                     
-                    # 阶段2 -> 脊柱曲率矫正
+                    # 阶段2 -> 脊柱曲率矫正（C型单段）
                     ("阶段2", "开始矫正"): ('blue_curvature', 'original'),
                     ("阶段2", "矫正完成"): ('blue_curvature', 'target'),
+                    
+                    # S型：胸段/腰段（仅保留标准写法）
+                    ("阶段2A", "开始矫正(胸段)"): ('blue_curvature_up', 'original'),
+                    ("阶段2A", "矫正完成(胸段)"): ('blue_curvature_up', 'target'),
+                    ("阶段2B", "开始矫正(腰段)"): ('blue_curvature_down', 'original'),
+                    ("阶段2B", "矫正完成(腰段)"): ('blue_curvature_down', 'target'),
                     
                     # 阶段3沉髋 -> 骨盆左右倾斜
                     ("阶段3", "开始沉髋"): ('gray_tilt', 'original'),
                     ("阶段3", "沉髋完成"): ('gray_tilt', 'target'),
                     
-                    # 阶段3沉肩 -> 肩部左右倾斜
-                    ("阶段3", "开始沉肩"): ('green_tilt', 'original'),
-                    ("阶段3", "沉肩完成"): ('green_tilt', 'target'),
+                    # 沉肩（阶段4）
+                    ("阶段4", "开始沉肩"): ('green_tilt', 'original'),
+                    ("阶段4", "沉肩完成"): ('green_tilt', 'target'),
                 }
                 
                 for row in reader:
@@ -823,29 +827,29 @@ class PatientBlocksTab(QWidget):
                         if value_type == 'original':
                             # 设置原始值
                             controller.set_original_values(sensor_data)
-                            print(f"\n设置 {controller_name} 原始值:")
-                            for i, value in enumerate(sensor_data):
-                                print(f"  传感器{i+1}: {value:.2f}")
+                            # print(f"\n设置 {controller_name} 原始值:")
+                            # for i, value in enumerate(sensor_data):
+                                # print(f"  传感器{i+1}: {value:.2f}")
                             
                             # 设置权重和传感器选择
                             for i, weight in enumerate(weights):
                                 if i < self.sensor_count:
                                     is_selected = abs(weight) > 0
                                     controller.set_sensor_selection(i, is_selected, abs(weight))
-                                    if is_selected:
-                                        print(f"  传感器{i+1}权重: {abs(weight):.2f}")
+                                    # if is_selected:
+                                        # print(f"  传感器{i+1}权重: {abs(weight):.2f}")
                             
                         elif value_type == 'target':
                             # 设置目标值
                             controller.set_target_values(sensor_data)
-                            print(f"\n设置 {controller_name} 目标值:")
-                            for i, value in enumerate(sensor_data):
-                                if controller.selected_sensors[i]:  # 只显示选中的传感器
-                                    print(f"  传感器{i+1}: {value:.2f}")
+                            # print(f"\n设置 {controller_name} 目标值:")
+                            # for i, value in enumerate(sensor_data):
+                            #     if controller.selected_sensors[i]:  # 只显示选中的传感器
+                            #         print(f"  传感器{i+1}: {value:.2f}")
                         
                         # 设置误差范围
                         controller.set_error_range(error_range)
-                        print(f"  误差范围: ±{error_range*100:.1f}%")
+                        # print(f"  误差范围: ±{error_range*100:.1f}%")
                         
                         # 存储完整事件数据
                         key = f"{stage}_{event_name}"
@@ -1030,6 +1034,8 @@ class PatientBlocksTab(QWidget):
                     params = {
                         'gray_rotation': 0,
                         'blue_curvature': 0,
+                        'blue_curvature_up': 0,
+                        'blue_curvature_down': 0,
                         'gray_tilt': 0,
                         'green_tilt': 0
                     }
@@ -1042,6 +1048,8 @@ class PatientBlocksTab(QWidget):
                     blocks_widget.update_visualization(
                         gray_rotation=params['gray_rotation'],
                         blue_curvature=params['blue_curvature'],
+                        blue_curvature_up=params['blue_curvature_up'],
+                        blue_curvature_down=params['blue_curvature_down'],
                         gray_tilt=params['gray_tilt'],
                         green_tilt=params['green_tilt']
                     )
@@ -1180,7 +1188,7 @@ class PatientBlocksTab(QWidget):
         self.current_stage = int(getattr(self, 'current_stage', 1)) + 1
         # 获取最大阶段
         stype = getattr(self, 'spine_type', 'C')
-        max_stages = 5 if stype == 'S' else 4
+        max_stages = 4
         if self.current_stage > max_stages:
             # 所有阶段完成
             self._complete_training()

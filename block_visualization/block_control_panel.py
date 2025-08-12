@@ -76,7 +76,8 @@ class BlockControlPanel(QWidget):
         layout.addWidget(self.gray_tilt)
         layout.addWidget(self.green_tilt)
 
-        # 默认 C 型：隐藏胸/腰两段
+        # 默认 C 型：显示单段曲率，隐藏胸/腰两段
+        self.blue_curvature.show()  # 显式显示C型的脊柱曲率控件
         self.blue_curvature_up.hide()
         self.blue_curvature_down.hide()
 
@@ -140,16 +141,17 @@ class BlockControlPanel(QWidget):
             if stage == 1:
                 self.gray_rotation.set_highlighted(True)
             elif stage == 2:
-                # C: 单段曲率；S: 胸段
-                (self.blue_curvature_up if is_s else self.blue_curvature).set_highlighted(True)
+                # C: 单段曲率；S: 胸/腰段曲率矫正
+                if is_s:
+                    self.blue_curvature_up.set_highlighted(True)
+                    self.blue_curvature_down.set_highlighted(True)
+                else:
+                    self.blue_curvature.set_highlighted(True)
             elif stage == 3:
-                # C: 骨盆左右倾斜；S: 腰段
-                (self.blue_curvature_down if is_s else self.gray_tilt).set_highlighted(True)
+                # 骨盆左右倾斜（C/S 相同）
+                self.gray_tilt.set_highlighted(True)
             elif stage == 4:
-                # C: 肩部左右倾斜；S: 骨盆左右倾斜
-                (self.gray_tilt if is_s else self.green_tilt).set_highlighted(True)
-            elif stage == 5 and is_s:
-                # S: 第 5 阶段肩部左右倾斜
+                # 肩部左右倾斜（C/S 相同）
                 self.green_tilt.set_highlighted(True)
         except Exception:
             # 某控件缺少 set_highlighted 不致命，忽略
@@ -163,10 +165,9 @@ class BlockControlPanel(QWidget):
         if is_s:
             mapping = {
                 1: self.gray_rotation,
-                2: self.blue_curvature_up,
-                3: self.blue_curvature_down,
-                4: self.gray_tilt,
-                5: self.green_tilt,
+                2: self.blue_curvature_up,  # 默认胸段
+                3: self.gray_tilt,
+                4: self.green_tilt,
             }
         else:
             mapping = {

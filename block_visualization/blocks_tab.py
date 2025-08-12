@@ -39,9 +39,9 @@ class BlocksTab(QWidget):
         # ====== 基础配置 ======
         self.sensor_count = sensor_count
         self.stage = 1
-        # 新增：脊柱类型与阶段总数（C=4, S=5）
+        # 脊柱类型与阶段总数固定为4
         self.spine_type = "C"
-        self.max_stages = 4  # 默认C型4阶段
+        self.max_stages = 4  # C/S 均为4阶段
 
         self.events_save_path = ""
         self.is_acquisition_active = False
@@ -68,6 +68,8 @@ class BlocksTab(QWidget):
         }
         
         # ====== 创建事件记录器 ======
+        # 事件记录器将由主窗口注入并复用，避免多实例覆盖
+        # 在主窗口完成注入前，先创建一个占位以通过属性访问
         self.event_recorder = EventRecorder()
         self.event_recorder.set_num_sensors(self.sensor_count)
         
@@ -133,6 +135,11 @@ class BlocksTab(QWidget):
         
         # 3D积木可视化器
         self.visualizer = BlocksVisualizer()
+        # 同步当前脊柱类型到可视化器（C/S）
+        try:
+            self.visualizer.spine_type = getattr(self, 'spine_type', 'C')
+        except Exception:
+            pass
         self.visualizer.setMinimumSize(200, 200)
         layout.addWidget(self.visualizer)
         
@@ -313,13 +320,17 @@ class BlocksTab(QWidget):
         spine_type = getattr(self, 'spine_type', 'C')
         
         if spine_type == 'S':
-            # S型脊柱（5阶段）
+            # S型脊柱（4阶段，阶段2包含胸/腰段两个参数）
             button_configs = {
                 1: [("开始训练", "training_start"), ("完成阶段", "stage_complete")],
-                2: [("开始矫正(胸段)", "correction_start_up"), ("矫正完成(胸段)", "correction_complete_up")],
-                3: [("开始矫正(腰段)", "correction_start_down"), ("矫正完成(腰段)", "correction_complete_down")],
-                4: [("开始沉髋", "hip_start"), ("沉髋完成", "hip_complete")],
-                5: [("开始沉肩", "shoulder_start"), ("沉肩完成", "shoulder_complete")]
+                2: [
+                    ("开始矫正(胸段)", "correction_start_up"),
+                    ("矫正完成(胸段)", "correction_complete_up"),
+                    ("开始矫正(腰段)", "correction_start_down"),
+                    ("矫正完成(腰段)", "correction_complete_down")
+                ],
+                3: [("开始沉髋", "hip_start"), ("沉髋完成", "hip_complete")],
+                4: [("开始沉肩", "shoulder_start"), ("沉肩完成", "shoulder_complete")]
             }
         else:
             # C型脊柱（4阶段）
@@ -446,20 +457,17 @@ class BlocksTab(QWidget):
                     else:
                         current_controller = self.control_panel.blue_curvature
                         controller_name = "脊柱曲率矫正"
-                else:
-                    # 对于其他阶段，仍使用gray_rotation作为通用数据源
-                    current_controller = self.control_panel.gray_rotation
-                    controller_name = "通用数据源"
+                # else:
+                #     # 对于其他阶段，仍使用gray_rotation作为通用数据源
+                #     current_controller = self.control_panel.gray_rotation
+                #     controller_name = "通用数据源"
                 
                 if current_controller and hasattr(current_controller, 'sensor_values'):
                     sensor_values = current_controller.sensor_values
                     if sensor_values:
                         print(f"从{controller_name}控制器获取到传感器数据: {sensor_values[:3]}...")
-                        # 添加时间戳并设置到事件记录器
-                        import time
-                        timestamp = time.time()
-                        sensor_data_with_timestamp = [timestamp] + sensor_values
-                        self.event_recorder.set_current_sensor_data(sensor_data_with_timestamp)
+                        # 直接设置到事件记录器（不添加时间戳）
+                        self.event_recorder.set_current_sensor_data(sensor_values)
                     else:
                         print(f"警告: {controller_name}控制器也没有传感器数据")
                 else:
@@ -474,15 +482,9 @@ class BlocksTab(QWidget):
         # 调用事件记录器记录事件
         if hasattr(self, 'event_recorder'):
             try:
-                # 记录事件（事件记录器已经有最新的传感器数据）
-                self.event_recorder.record_event(
-                    event_name=button_text,
-                    event_code=button_code,
-                    stage=f"阶段{self.stage}"
-                )
-                
+                # 使用统一的记录方法，确保参数完整（包括权重与误差范围）
+                self._record_event(event_name=button_text, event_code=button_code)
                 print(f"事件已记录: {button_text}")
-                
             except Exception as e:
                 print(f"记录事件时出错: {e}")
         
@@ -697,7 +699,6 @@ class BlocksTab(QWidget):
         from datetime import datetime
         self.is_acquisition_active = True
         self.current_acquisition_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.event_recorder.start_new_acquisition()
         
         # 清空绘图数据
         self.clear_plot_data()
@@ -718,14 +719,26 @@ class BlocksTab(QWidget):
                 main_window = self.parent()
                 # 如果主窗口有最新的传感器数据，立即更新到事件记录器
                 if hasattr(main_window, 'latest_sensor_data') and main_window.latest_sensor_data:
-                    self.event_recorder.set_current_sensor_data(main_window.latest_sensor_data)
-                    print(f"已强制更新传感器数据: {main_window.latest_sensor_data[:3]}...")
+                    latest = main_window.latest_sensor_data
+                    try:
+                        has_ts = isinstance(latest[0], (int, float)) and ((latest[0] > 1e8) or (len(latest) == self.sensor_count + 1))
+                    except Exception:
+                        has_ts = False
+                    values_only = latest[1:] if has_ts else latest
+                    self.event_recorder.set_current_sensor_data(values_only)
+                    print(f"已强制更新传感器数据: {values_only[:3]}...")
                 # 如果有数据管理器，从中获取最新数据
                 elif hasattr(main_window, 'data_manager') and main_window.data_manager:
                     latest_data = main_window.data_manager.get_latest_data()
                     if latest_data:
-                        self.event_recorder.set_current_sensor_data(latest_data)
-                        print(f"从数据管理器获取最新数据: {latest_data[:3]}...")
+                        # latest_data 可能包含时间戳（长度为 传感器数+1 或首元素为 epoch 秒），此处剔除
+                        try:
+                            has_ts = isinstance(latest_data[0], (int, float)) and ((latest_data[0] > 1e8) or (len(latest_data) == self.sensor_count + 1))
+                        except Exception:
+                            has_ts = False
+                        values_only = latest_data[1:] if has_ts else latest_data
+                        self.event_recorder.set_current_sensor_data(values_only)
+                        print(f"从数据管理器获取最新数据: {values_only[:3]}...")
             
             # 立即更新绘图数据
             if hasattr(self, 'plot_widget') and self.event_recorder.current_sensor_data:
@@ -751,9 +764,10 @@ class BlocksTab(QWidget):
         self._update_sensor_values(event_name, event_code)
         
         # 使用事件记录器记录事件
+        from utils.stage_utils import format_stage_label
         success = self.event_recorder.record_event(
             event_name=event_name,
-            stage=f"阶段{self.stage}",
+            stage=format_stage_label(self.stage, getattr(self, 'spine_type', 'C')),
             additional_data={
                 'event_code': event_code or event_name.lower().replace(' ', '_'),
                 'sensor_weights': sensor_weights,
@@ -801,7 +815,22 @@ class BlocksTab(QWidget):
             
             # 在曲线图上添加事件标记
             if hasattr(self, 'plot_widget') and current_sensor_data:
-                current_time_from_sensor = current_sensor_data[0] if current_sensor_data else 0
+                # 若 current_sensor_data 含时间戳则使用；否则回退到绘图缓冲区最近时间戳或系统时间
+                import time
+                use_ts = None
+                try:
+                    if isinstance(current_sensor_data[0], (int, float)) and (
+                        current_sensor_data[0] > 1e8 or len(current_sensor_data) == self.sensor_count + 1
+                    ):
+                        use_ts = current_sensor_data[0]
+                except Exception:
+                    use_ts = None
+                if use_ts is None:
+                    try:
+                        use_ts = self._plot_data[-1][0] if (self._plot_data and isinstance(self._plot_data[-1][0], (int, float))) else time.time()
+                    except Exception:
+                        use_ts = time.time()
+                current_time_from_sensor = use_ts
                 self._add_event_marker(current_time_from_sensor, event_name)
             
             # 记录到训练记录器（增强版数据）
@@ -822,7 +851,8 @@ class BlocksTab(QWidget):
                     'visualization_state': self.get_visualization_state()
                 })
             
-            print(f"已记录事件: {event_name} (阶段{self.stage}) - 相对时间: {relative_time:.1f}s, 误差范围: {error_range}")
+            from utils.stage_utils import format_stage_label
+            print(f"已记录事件: {event_name} ({format_stage_label(self.stage, getattr(self, 'spine_type', 'C'))}) - 相对时间: {relative_time:.1f}s, 误差范围: {error_range}")
         else:
             print(f"记录事件失败: {event_name}")
     
@@ -938,76 +968,34 @@ class BlocksTab(QWidget):
                 controller = self.control_panel.gray_rotation
                 weights = self._get_controller_weights(controller)
                 error_range = controller.get_error_range()
-                print(f"阶段1权重记录: 骨盆前后翻转")
+                # print(f"阶段1权重记录: 骨盆前后翻转")
                 
             elif self.stage == 2:
-                controller = (self.control_panel.blue_curvature_up
-                    if getattr(self, 'spine_type', 'C') == 'S' and hasattr(self.control_panel, 'blue_curvature_up')
-                    else self.control_panel.blue_curvature)
+                # C 型 = 单段曲率，S 型根据事件区分胸/腰段
+                if self.spine_type == 'S':
+                    if (event_code and 'up' in event_code.lower()) or (event_name and '胸' in event_name):
+                        controller = self.control_panel.blue_curvature_up
+                    elif (event_code and 'down' in event_code.lower()) or (event_name and '腰' in event_name):
+                        controller = self.control_panel.blue_curvature_down
+                    else:
+                        controller = self.control_panel.blue_curvature_up
+                else:
+                    controller = self.control_panel.blue_curvature
                 weights = self._get_controller_weights(controller)
                 error_range = controller.get_error_range()
-                print(f"阶段2权重记录: 脊柱曲率矫正")
-                
+
             elif self.stage == 3:
-                if getattr(self, 'spine_type', 'C') == 'S' and hasattr(self.control_panel, 'blue_curvature_down'):
-                    controller = self.control_panel.blue_curvature_down
-                    weights = self._get_controller_weights(controller)
-                    error_range = controller.get_error_range()
-                    print('阶段3权重记录: 腰段曲率')
-                else:
-                    # 【修复关键部分】阶段3：根据具体事件分别记录不同控制器的权重
-                    print(f"阶段3权重记录 - 事件名称: '{event_name}', 事件代码: '{event_code}'")
-                    
-                    # 修复：使用正确的事件代码和名称判断逻辑
-                    if (event_code and ("hip" in event_code.lower())) or (event_name and ("沉髋" in event_name)):
-                        # 沉髋相关事件：使用骨盆左右倾斜控制器
-                        controller = self.control_panel.gray_tilt  # 骨盆左右倾斜
-                        weights = self._get_controller_weights(controller)
-                        error_range = controller.get_error_range()
-                        print(f"→ 记录沉髋事件权重: 使用骨盆左右倾斜控制器")
-                        
-                    elif (event_code and ("shoulder" in event_code.lower())) or (event_name and ("沉肩" in event_name)):
-                        # 沉肩相关事件：使用肩部左右倾斜控制器
-                        controller = self.control_panel.green_tilt  # 肩部左右倾斜
-                        weights = self._get_controller_weights(controller)
-                        error_range = controller.get_error_range()
-                        print(f"→ 记录沉肩事件权重: 使用肩部左右倾斜控制器")
-                        
-                    else:
-                        # 其他阶段3事件：合并两个控制器的权重（保持兼容性）
-                        gray_weights = self._get_controller_weights(self.control_panel.gray_tilt)
-                        green_weights = self._get_controller_weights(self.control_panel.green_tilt)
-                        for i in range(min(len(weights), len(gray_weights), len(green_weights))):
-                            weights[i] = gray_weights[i] + green_weights[i]
-                        error_range = (self.control_panel.gray_tilt.get_error_range() + 
-                                    self.control_panel.green_tilt.get_error_range()) / 2
-                        print(f"→ 记录阶段3通用事件权重: 合并两个控制器权重")
-                    
+                controller = self.control_panel.gray_tilt
+                weights = self._get_controller_weights(controller)
+                error_range = controller.get_error_range()
+
             elif self.stage == 4:
-                # 阶段4：骨盆左右倾斜（C型脊柱的第4阶段）或者肩部左右倾斜（S型脊柱的第4阶段）
-                if getattr(self, 'spine_type', 'C') == 'S':
-                    # S型脊柱第4阶段：骨盆左右倾斜
-                    controller = self.control_panel.gray_tilt
-                    weights = self._get_controller_weights(controller)
-                    error_range = controller.get_error_range()
-                    print(f"阶段4权重记录: S型脊柱骨盆左右倾斜")
-                else:
-                    # C型脊柱第4阶段：肩部左右倾斜
-                    controller = self.control_panel.green_tilt
-                    weights = self._get_controller_weights(controller)
-                    error_range = controller.get_error_range()
-                    print(f"阶段4权重记录: C型脊柱肩部左右倾斜")
-                    
-            elif self.stage == 5:
-                # 阶段5：仅S型脊柱使用，肩部左右倾斜
-                if getattr(self, 'spine_type', 'C') == 'S':
-                    controller = self.control_panel.green_tilt
-                    weights = self._get_controller_weights(controller)
-                    error_range = controller.get_error_range()
-                    print(f"阶段5权重记录: S型脊柱肩部左右倾斜")
-                else:
-                    print(f"警告: C型脊柱不应该有第5阶段")
-                    
+                controller = self.control_panel.green_tilt
+                weights = self._get_controller_weights(controller)
+                error_range = controller.get_error_range()
+
+            # 移除原阶段5分支（现已统一到阶段4）
+
         except Exception as e:
             print(f"获取权重和误差范围失败: {e}")
         
@@ -1188,9 +1176,10 @@ class BlocksTab(QWidget):
 
     def connect_signals(self):
         """连接组件间的信号与槽"""
-        print("BlocksTab: 开始连接信号...")
+        # print("BlocksTab: 开始连接信号...")
     
         if hasattr(self, 'control_panel'):
+            # 基础控制器信号连接（始终存在）
             self.control_panel.gray_rotation.value_changed.connect(
                 lambda v: self.update_param("gray_rotation", v))
             self.control_panel.gray_tilt.value_changed.connect(
@@ -1200,87 +1189,190 @@ class BlocksTab(QWidget):
             self.control_panel.green_tilt.value_changed.connect(
                 lambda v: self.update_param("green_tilt", v))
             
-            # S型脊柱的额外控制器信号连接
-            if hasattr(self.control_panel, 'blue_curvature_up'):
-                self.control_panel.blue_curvature_up.value_changed.connect(
-                    lambda v: self.update_param("blue_curvature_up", v))
-            if hasattr(self.control_panel, 'blue_curvature_down'):
-                self.control_panel.blue_curvature_down.value_changed.connect(
-                    lambda v: self.update_param("blue_curvature_down", v))
-        
-            # 阈值警报信号
-            self.control_panel.gray_rotation.threshold_alert.connect(
-                lambda active, msg: self.handle_alert("骨盆前后翻转", active, msg))
-            self.control_panel.blue_curvature.threshold_alert.connect(
-                lambda active, msg: self.handle_alert("脊柱曲率矫正", active, msg))
-            self.control_panel.gray_tilt.threshold_alert.connect(
-                lambda active, msg: self.handle_alert("骨盆左右倾斜", active, msg))
-            self.control_panel.green_tilt.threshold_alert.connect(
-                lambda active, msg: self.handle_alert("肩部左右倾斜", active, msg))
+            # 脊柱曲率控制器信号连接（根据脊柱类型动态连接）
+            self._connect_curvature_signals()
+            
+            # 阈值警报信号连接
+            self._connect_alert_signals()
     
         # 阶段同步到训练记录器
         if hasattr(self, 'training_recorder') and self.training_recorder:
             self.training_recorder.set_stage(self.stage)
-        
+            
             # 连接阶段按钮到训练记录器
-            if hasattr(self, 'start_training_btn'):
-                self.start_training_btn.clicked.connect(lambda: self.training_recorder.start_stage(1))
-            if hasattr(self, 'complete_stage_btn'):
-                self.complete_stage_btn.clicked.connect(lambda: self.training_recorder.complete_stage(1))
-            if hasattr(self, 'start_correction_btn'):
-                self.start_correction_btn.clicked.connect(lambda: self.training_recorder.start_stage(2))
-            if hasattr(self, 'complete_correction_btn'):
-                self.complete_correction_btn.clicked.connect(lambda: self.training_recorder.complete_stage(2))
-            if hasattr(self, 'start_hip_btn'):
-                self.start_hip_btn.clicked.connect(lambda: self.training_recorder.start_stage('3a'))
-            if hasattr(self, 'end_hip_btn'):
-                self.end_hip_btn.clicked.connect(lambda: self.training_recorder.complete_stage('3a'))
-            if hasattr(self, 'start_shoulder_btn'):
-                self.start_shoulder_btn.clicked.connect(lambda: self.training_recorder.start_stage('3b'))
-            if hasattr(self, 'end_shoulder_btn'):
-                self.end_shoulder_btn.clicked.connect(lambda: self.training_recorder.complete_stage('3b'))
+            self._connect_training_recorder_signals()
     
         print("BlocksTab: 信号连接完成")
 
+    def _connect_curvature_signals(self):
+        """连接脊柱曲率控制器信号（根据脊柱类型）"""
+        spine_type = getattr(self, 'spine_type', 'C')
+        print(f"BlocksTab: 连接脊柱曲率信号 - 脊柱类型: {spine_type}")
+        
+        if spine_type == 'S':
+            # S型脊柱：连接胸段和腰段曲率控制器
+            if hasattr(self.control_panel, 'blue_curvature_up'):
+                self.control_panel.blue_curvature_up.value_changed.connect(
+                    lambda v: self.update_param("blue_curvature_up", v))
+                print("BlocksTab: 已连接 blue_curvature_up 信号")
+            
+            if hasattr(self.control_panel, 'blue_curvature_down'):
+                self.control_panel.blue_curvature_down.value_changed.connect(
+                    lambda v: self.update_param("blue_curvature_down", v))
+                print("BlocksTab: 已连接 blue_curvature_down 信号")
+        else:
+            # C型脊柱：连接单段曲率控制器
+            self.control_panel.blue_curvature.value_changed.connect(
+                lambda v: self.update_param("blue_curvature", v))
+            print("BlocksTab: 已连接 blue_curvature 信号")
 
-    
+    def _connect_alert_signals(self):
+        """连接阈值警报信号"""
+        self.control_panel.gray_rotation.threshold_alert.connect(
+            lambda active, msg: self.handle_alert("骨盆前后翻转", active, msg))
+        self.control_panel.gray_tilt.threshold_alert.connect(
+            lambda active, msg: self.handle_alert("骨盆左右倾斜", active, msg))
+        self.control_panel.green_tilt.threshold_alert.connect(
+            lambda active, msg: self.handle_alert("肩部左右倾斜", active, msg))
+        
+        # 根据脊柱类型连接曲率警报信号
+        spine_type = getattr(self, 'spine_type', 'C')
+        if spine_type == 'S':
+            if hasattr(self.control_panel, 'blue_curvature_up'):
+                self.control_panel.blue_curvature_up.threshold_alert.connect(
+                    lambda active, msg: self.handle_alert("脊柱曲率矫正·胸段", active, msg))
+            if hasattr(self.control_panel, 'blue_curvature_down'):
+                self.control_panel.blue_curvature_down.threshold_alert.connect(
+                    lambda active, msg: self.handle_alert("脊柱曲率矫正·腰段", active, msg))
+        else:
+            self.control_panel.blue_curvature.threshold_alert.connect(
+                lambda active, msg: self.handle_alert("脊柱曲率矫正", active, msg))
+
+    def _connect_training_recorder_signals(self):
+        """连接训练记录器信号"""
+        # 连接阶段按钮到训练记录器
+        if hasattr(self, 'start_training_btn'):
+            self.start_training_btn.clicked.connect(lambda: self.training_recorder.start_stage(1))
+        if hasattr(self, 'complete_stage_btn'):
+            self.complete_stage_btn.clicked.connect(lambda: self.training_recorder.complete_stage(1))
+        if hasattr(self, 'start_correction_btn'):
+            self.start_correction_btn.clicked.connect(lambda: self.training_recorder.start_stage(2))
+        if hasattr(self, 'complete_correction_btn'):
+            self.complete_correction_btn.clicked.connect(lambda: self.training_recorder.complete_stage(2))
+        if hasattr(self, 'start_hip_btn'):
+            self.start_hip_btn.clicked.connect(lambda: self.training_recorder.start_stage('3a'))
+        if hasattr(self, 'end_hip_btn'):
+            self.end_hip_btn.clicked.connect(lambda: self.training_recorder.complete_stage('3a'))
+        if hasattr(self, 'start_shoulder_btn'):
+            self.start_shoulder_btn.clicked.connect(lambda: self.training_recorder.start_stage('3b'))
+        if hasattr(self, 'end_shoulder_btn'):
+            self.end_shoulder_btn.clicked.connect(lambda: self.training_recorder.complete_stage('3b'))
     
     def update_spine_type(self, spine_type):
         """更新脊柱类型"""
         print(f"BlocksTab: 更新脊柱类型为 {spine_type}")
         self.spine_type = str(spine_type).upper() if spine_type else "C"
         # C=4阶段, S=5阶段
-        self.max_stages = 5 if self.spine_type == "S" else 4
+        self.max_stages = 4
+        
         # 通知控制面板切换 C/S 显示
         try:
             if hasattr(self, 'control_panel') and hasattr(self.control_panel, 'set_spine_type'):
                 self.control_panel.set_spine_type(self.spine_type)
+                print(f"BlocksTab: 控制面板脊柱类型已设置为 {self.spine_type}")
         except Exception as _e:
             print('set_spine_type 调用失败:', _e)
+        
+        # 同步到可视化器
+        try:
+            if hasattr(self, 'visualizer'):
+                self.visualizer.spine_type = self.spine_type
+        except Exception as _e:
+            print('同步可视化器脊柱类型失败:', _e)
+        
+        # 重新连接脊柱曲率控制器信号（关键修复）
+        try:
+            self._reconnect_curvature_signals()
+        except Exception as _e:
+            print('重新连接曲率信号失败:', _e)
+        
         # 事件按钮根据类型重建
         try:
             if hasattr(self, '_rebuild_event_buttons'):
                 self._rebuild_event_buttons()
         except Exception as _e:
             print('_rebuild_event_buttons 失败:', _e)
+            
         # 切换类型后如果当前阶段超出上限则回退
         if getattr(self, 'stage', 1) > self.max_stages:
             self.stage = self.max_stages
+            
         # 更新记录器
         if hasattr(self, 'training_recorder') and self.training_recorder:
             self.training_recorder.set_spine_type(spine_type)
+            
         # 刷新阶段UI
         try:
             self.update_stage_ui()
         except Exception as _e:
             print("update_stage_ui尚未可用或刷新失败：", _e)
 
-    
+    def _reconnect_curvature_signals(self):
+        """重新连接脊柱曲率控制器信号（在脊柱类型切换时调用）"""
+        print(f"BlocksTab: 重新连接曲率信号 - 脊柱类型: {self.spine_type}")
+        
+        # 断开所有现有的曲率控制器信号连接
+        try:
+            # 尝试断开可能存在的连接
+            if hasattr(self.control_panel, 'blue_curvature'):
+                self.control_panel.blue_curvature.value_changed.disconnect()
+                self.control_panel.blue_curvature.threshold_alert.disconnect()
+            if hasattr(self.control_panel, 'blue_curvature_up'):
+                self.control_panel.blue_curvature_up.value_changed.disconnect()
+                self.control_panel.blue_curvature_up.threshold_alert.disconnect()
+            if hasattr(self.control_panel, 'blue_curvature_down'):
+                self.control_panel.blue_curvature_down.value_changed.disconnect()
+                self.control_panel.blue_curvature_down.threshold_alert.disconnect()
+        except Exception as e:
+            # 断开连接失败不是致命错误，可能本来就没有连接
+            print(f"断开曲率信号连接时出现警告（可忽略）: {e}")
+        
+        # 重新连接适当的信号
+        if self.spine_type == 'S':
+            # S型脊柱：连接胸段和腰段曲率控制器
+            if hasattr(self.control_panel, 'blue_curvature_up'):
+                self.control_panel.blue_curvature_up.value_changed.connect(
+                    lambda v: self.update_param("blue_curvature_up", v))
+                self.control_panel.blue_curvature_up.threshold_alert.connect(
+                    lambda active, msg: self.handle_alert("脊柱曲率矫正·胸段", active, msg))
+                print("BlocksTab: 重新连接 blue_curvature_up 信号")
+            
+            if hasattr(self.control_panel, 'blue_curvature_down'):
+                self.control_panel.blue_curvature_down.value_changed.connect(
+                    lambda v: self.update_param("blue_curvature_down", v))
+                self.control_panel.blue_curvature_down.threshold_alert.connect(
+                    lambda active, msg: self.handle_alert("脊柱曲率矫正·腰段", active, msg))
+                print("BlocksTab: 重新连接 blue_curvature_down 信号")
+        else:
+            # C型脊柱：连接单段曲率控制器
+            self.control_panel.blue_curvature.value_changed.connect(
+                lambda v: self.update_param("blue_curvature", v))
+            self.control_panel.blue_curvature.threshold_alert.connect(
+                lambda active, msg: self.handle_alert("脊柱曲率矫正", active, msg))
+            print("BlocksTab: 重新连接 blue_curvature 信号")
+
     def update_spine_direction(self, spine_direction):
         """更新脊柱方向"""
         print(f"BlocksTab: 更新脊柱方向为 {spine_direction}")
         if hasattr(self, 'training_recorder') and self.training_recorder:
             self.training_recorder.set_spine_direction(spine_direction)
+        # 同步到可视化器，使蓝色曲率按方向翻转
+        try:
+            if hasattr(self, 'visualizer'):
+                self.visualizer.spine_direction = spine_direction
+                self.visualizer.update()
+        except Exception as _e:
+            print('同步可视化器脊柱方向失败:', _e)
 
     # ================================================================
     # 信号连接和可视化控制
@@ -1293,13 +1385,12 @@ class BlocksTab(QWidget):
         
         # 动态阶段权限检查（支持C型和S型）
         if s_type == 'S':
-            # S型脊柱（5阶段）
+            # S型脊柱（4阶段，阶段2包含胸/腰段两个控制参数）
             stage_param_map = {
                 1: ["gray_rotation"],
-                2: ["blue_curvature_up"], 
-                3: ["blue_curvature_down"],
-                4: ["gray_tilt"],
-                5: ["green_tilt"]
+                2: ["blue_curvature_up", "blue_curvature_down"],
+                3: ["gray_tilt"],
+                4: ["green_tilt"],
             }
         else:
             # C型脊柱（4阶段）
@@ -1311,20 +1402,22 @@ class BlocksTab(QWidget):
             }
         
         # 检查参数是否属于当前阶段
-        allowed_params = stage_param_map.get(self.stage, [])
-        if param_name not in allowed_params:
-            print(f"参数 {param_name} 不属于{s_type}型第{self.stage}阶段，跳过更新")
-            return
+        # allowed_params = stage_param_map.get(self.stage, [])
+
+        # if param_name not in allowed_params:
+        #     # print(f"参数 {param_name} 不属于{s_type}型第{self.stage}阶段，跳过更新")
+        #     return
             
-        print(f"更新参数: {param_name} = {value:.3f} (阶段{self.stage}, {s_type}型)")
+        # print(f"BlocksTab: 更新参数: {param_name} = {value:.3f} (阶段{self.stage}, {s_type}型)")
         
+
         # 更新可视化器参数
         param_mapping = {
             "gray_rotation": "gray_block_rotation",
             "gray_tilt": "gray_block_tilt",
             "blue_curvature": "blue_blocks_curvature",
-            "blue_curvature_up": "blue_blocks_curvature",  # S型胸段映射到蓝色积木
-            "blue_curvature_down": "blue_blocks_curvature", # S型腰段也映射到蓝色积木
+            "blue_curvature_up": "blue_blocks_curvature_up",
+            "blue_curvature_down": "blue_blocks_curvature_down",
             "green_tilt": "green_block_tilt"
         }
         
@@ -1332,6 +1425,8 @@ class BlocksTab(QWidget):
             visualizer_attr = param_mapping[param_name]
             setattr(self.visualizer, visualizer_attr, value)
             self.visualizer.update()
+        # else:
+            # print(f"BlocksTab: 警告 - 未知参数名称: {param_name}")
     
     def handle_alert(self, control_name, active, message):
         """处理传感器阈值警报"""
@@ -1601,7 +1696,13 @@ class BlocksTab(QWidget):
             if hasattr(self.event_recorder, 'get_latest_sensor_data'):
                 latest = self.event_recorder.get_latest_sensor_data()
                 if latest and len(latest) > 1:
-                    self.event_recorder.current_sensor_data = latest
+                    # 移除可能的时间戳，确保事件记录器中的 current_sensor_data 仅为传感器值
+                    try:
+                        has_ts = isinstance(latest[0], (int, float)) and ((latest[0] > 1e8) or (len(latest) == self.sensor_count + 1))
+                    except Exception:
+                        has_ts = False
+                    values_only = latest[1:] if has_ts else latest
+                    self.event_recorder.set_current_sensor_data(values_only)
             if hasattr(self, 'plot_widget') and hasattr(self.plot_widget, 'force_next_update'):
                 self.plot_widget.force_next_update()
 
@@ -1609,9 +1710,16 @@ class BlocksTab(QWidget):
         if not current or len(current) <= 1:
             print("警告: 没有有效的传感器数据，无法更新参数")
             return
-        sensor_values = current[1:]  # 去时间戳
-        print(f"传感器数据: {len(sensor_values)}个传感器")
-        print(f"前10个传感器数据: {sensor_values[:10]}")
+        # 判断首元素是否为时间戳（epoch 秒通常 > 1e8，或长度为 传感器数+1）
+        try:
+            has_timestamp = False
+            if isinstance(current[0], (int, float)):
+                has_timestamp = (current[0] > 1e8) or (len(current) == self.sensor_count + 1)
+        except Exception:
+            has_timestamp = False
+        sensor_values = current[1:] if has_timestamp else current  # 仅在确实包含时间戳时才去除
+        # print(f"传感器数据: {len(sensor_values)}个传感器")
+        # print(f"前10个传感器数据: {sensor_values[:10]}")
         
         # 同时检查控制器中的实际显示数据
         if hasattr(self, 'control_panel') and self.stage == 1:
@@ -1685,45 +1793,28 @@ class BlocksTab(QWidget):
                 write_values(ctrl, "bv")
 
         elif self.stage == 2:
-            ctrl = (self.control_panel.blue_curvature_up
-                    if s_type == 'S' and hasattr(self.control_panel, 'blue_curvature_up')
-                    else self.control_panel.blue_curvature)
+            if s_type == 'S':
+                if (event_code and 'up' in event_code.lower()) or ('胸' in (event_name or '')):
+                    ctrl = self.control_panel.blue_curvature_up
+                elif (event_code and 'down' in event_code.lower()) or ('腰' in (event_name or '')):
+                    ctrl = self.control_panel.blue_curvature_down
+                else:
+                    ctrl = self.control_panel.blue_curvature_up
+            else:
+                ctrl = self.control_panel.blue_curvature
             if "开始" in event_name:
                 write_values(ctrl, "ov")
             elif "完成" in event_name or "矫正完成" in event_name:
                 write_values(ctrl, "bv")
 
         elif self.stage == 3:
-            if s_type == 'S' and hasattr(self.control_panel, 'blue_curvature_down'):
-                ctrl = self.control_panel.blue_curvature_down
-                if "开始" in event_name:
-                    write_values(ctrl, "ov")
-                elif "完成" in event_name or "矫正完成" in event_name:
-                    write_values(ctrl, "bv")
-            else:
-                # C型：按事件区分沉髋/沉肩
-                is_hip = (event_code and "hip" in event_code.lower()) or ("沉髋" in (event_name or ""))
-                is_shoulder = (event_code and "shoulder" in event_code.lower()) or ("沉肩" in (event_name or ""))
-                if is_hip:
-                    ctrl = self.control_panel.gray_tilt
-                elif is_shoulder:
-                    ctrl = self.control_panel.green_tilt
-                else:
-                    ctrl = None
-                if ctrl:
-                    if "开始" in event_name:
-                        write_values(ctrl, "ov")
-                    elif "完成" in event_name:
-                        write_values(ctrl, "bv")
-
-        elif self.stage == 4:
-            ctrl = self.control_panel.gray_tilt if s_type == 'S' else self.control_panel.green_tilt
+            ctrl = self.control_panel.gray_tilt
             if "开始" in event_name:
                 write_values(ctrl, "ov")
             elif "完成" in event_name:
                 write_values(ctrl, "bv")
 
-        elif self.stage == 5 and s_type == 'S':
+        elif self.stage == 4:
             ctrl = self.control_panel.green_tilt
             if "开始" in event_name:
                 write_values(ctrl, "ov")

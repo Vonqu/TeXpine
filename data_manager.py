@@ -111,7 +111,7 @@ class DataManager:
     def init_performance_monitoring(self):
         """初始化性能监控"""
         self.performance_stats['start_time'] = datetime.datetime.now()
-        print("✓ 性能监控已启动")
+        # print("✓ 性能监控已启动")
         
     def clear_data(self):
         """清空所有数据"""
@@ -415,9 +415,7 @@ class DataManager:
         print("✓ 数据采集开始，优化存储系统已就绪")
         
     def save_data(self, parent_widget=None, num_sensors=None, sensor_names=None):
-        """
-        保存数据到CSV文件（修改版：支持患者端扩展数据格式）
-        """
+        """        保存数据到CSV文件（修改版：支持患者端扩展数据格式）        """
         if not self.save_path:
             if parent_widget:
                 QMessageBox.warning(parent_widget, "错误", "未指定保存路径")
@@ -795,10 +793,10 @@ class DataManager:
                 
                 mapped_values.append(mapped_val)
                 
-                # 调试信息（前3个传感器）
-                if i < 3:
-                    print(f"传感器{i+1}: 原始={original_val:.1f}, 最佳={target_val:.1f}, "
-                          f"当前={sensor_val:.1f}, 映射={mapped_val:.3f}")
+                # # 调试信息（前3个传感器）
+                # if i < 3:
+                #     print(f"传感器{i+1}: 原始={original_val:.1f}, 最佳={target_val:.1f}, "
+                #           f"当前={sensor_val:.1f}, 映射={mapped_val:.3f}")
             else:
                 mapped_values.append(0.5)  # 默认值
         

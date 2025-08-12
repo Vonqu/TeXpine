@@ -146,7 +146,7 @@ class MultiSensorKalmanFilter:
         self.total_filtered_count = 0
         self.start_time = time.time()
         
-        print(f"多传感器卡尔曼滤波器初始化完成: {num_sensors} 个传感器")
+        # print(f"多传感器卡尔曼滤波器初始化完成: {num_sensors} 个传感器")
     
     def filter_sensor_data(self, sensor_data: List[float]) -> List[float]:
         """
@@ -331,47 +331,47 @@ class MultiSensorKalmanFilter:
         return quality_metrics
 
 
-# 测试函数
-def test_kalman_filter():
-    """测试卡尔曼滤波器功能"""
-    print("开始测试卡尔曼滤波器...")
+# # 测试函数
+# def test_kalman_filter():
+#     """测试卡尔曼滤波器功能"""
+#     print("开始测试卡尔曼滤波器...")
     
-    # 创建多传感器滤波器
-    filter_kf = MultiSensorKalmanFilter(num_sensors=3, process_noise=0.01, measurement_noise=0.1)
+#     # 创建多传感器滤波器
+#     filter_kf = MultiSensorKalmanFilter(num_sensors=3, process_noise=0.01, measurement_noise=0.1)
     
-    # 模拟带噪声的传感器数据
-    import random
+#     # 模拟带噪声的传感器数据
+#     import random
     
-    # 生成测试数据
-    test_data = []
-    for i in range(10):
-        # 模拟时间戳和3个传感器数据
-        timestamp = i * 0.1
-        sensor1 = 2500 + 50 * np.sin(i * 0.5) + random.gauss(0, 10)  # 正弦波 + 噪声
-        sensor2 = 2600 + 30 * np.cos(i * 0.3) + random.gauss(0, 8)   # 余弦波 + 噪声
-        sensor3 = 2700 + 20 * np.sin(i * 0.7) + random.gauss(0, 12)  # 另一个正弦波 + 噪声
+#     # 生成测试数据
+#     test_data = []
+#     for i in range(10):
+#         # 模拟时间戳和3个传感器数据
+#         timestamp = i * 0.1
+#         sensor1 = 2500 + 50 * np.sin(i * 0.5) + random.gauss(0, 10)  # 正弦波 + 噪声
+#         sensor2 = 2600 + 30 * np.cos(i * 0.3) + random.gauss(0, 8)   # 余弦波 + 噪声
+#         sensor3 = 2700 + 20 * np.sin(i * 0.7) + random.gauss(0, 12)  # 另一个正弦波 + 噪声
         
-        data_point = [timestamp, sensor1, sensor2, sensor3]
-        test_data.append(data_point)
+#         data_point = [timestamp, sensor1, sensor2, sensor3]
+#         test_data.append(data_point)
     
-    print("原始数据:")
-    for i, data in enumerate(test_data[:5]):  # 只显示前5个
-        print(f"  数据点 {i+1}: {data}")
+#     print("原始数据:")
+#     for i, data in enumerate(test_data[:5]):  # 只显示前5个
+#         print(f"  数据点 {i+1}: {data}")
     
-    print("\n滤波后数据:")
-    for i, data in enumerate(test_data):
-        filtered_data, raw_data = filter_kf.filter_data_with_timestamp(data)
-        if i < 5:  # 只显示前5个
-            print(f"  数据点 {i+1}: {filtered_data}")
+#     print("\n滤波后数据:")
+#     for i, data in enumerate(test_data):
+#         filtered_data, raw_data = filter_kf.filter_data_with_timestamp(data)
+#         if i < 5:  # 只显示前5个
+#             print(f"  数据点 {i+1}: {filtered_data}")
     
-    # 显示统计信息
-    stats = filter_kf.get_filter_stats()
-    print(f"\n滤波统计信息:")
-    for key, value in stats.items():
-        print(f"  {key}: {value}")
+#     # 显示统计信息
+#     stats = filter_kf.get_filter_stats()
+#     print(f"\n滤波统计信息:")
+#     for key, value in stats.items():
+#         print(f"  {key}: {value}")
     
-    print("卡尔曼滤波器测试完成!")
+#     print("卡尔曼滤波器测试完成!")
 
 
-if __name__ == "__main__":
-    test_kalman_filter() 
+# if __name__ == "__main__":
+#     test_kalman_filter() 
