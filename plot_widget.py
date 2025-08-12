@@ -176,9 +176,29 @@ class SensorPlotWidget(QWidget):
             window_size = self.window_size_spin.value()
         
         try:
+            # 统一数据列数，避免不规则数组导致的转换错误
+            try:
+                min_len = min(len(row) for row in data)
+            except Exception:
+                print("警告：数据行格式不一致，无法确定最小列数")
+                return
+            if min_len < 2:
+                print("警告：数据列不足，无法绘图")
+                return
+            uniform_data = [list(row)[:min_len] for row in data]
+            
             # 准备数据
-            data_array = np.array(data)
+            data_array = np.asarray(uniform_data, dtype=float)
             times = data_array[:, 0]  # 第一列是时间戳
+            
+            # 若尚未创建曲线，按当前数据列数自动创建
+            if len(self.plot_curves) == 0:
+                num_sensors = data_array.shape[1] - 1
+                if num_sensors <= 0:
+                    print("警告：传感器列数为0")
+                    return
+                colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k'] * 3
+                self.setup_curves(num_sensors, colors)
             
             # 检查数据有效性
             if len(times) == 0:
@@ -222,7 +242,11 @@ class SensorPlotWidget(QWidget):
                     self.plot_widget.setXRange(times[0], times[-1])
                     
             # 强制重绘
-            self.plot_widget.replot()
+            try:
+                self.plot_widget.replot()
+            except Exception:
+                # 某些环境下无replot方法，忽略
+                pass
             
         except Exception as e:
             print(f"更新图表失败: {e}")

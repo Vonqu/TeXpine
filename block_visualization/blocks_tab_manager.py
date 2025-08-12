@@ -282,8 +282,7 @@ class BlocksTabManager(QObject):
     
     def export_training_data(self, file_path):
         """
-        导出训练数据
-        ============
+        导出训练数据到指定文件 - 已禁用Excel保存功能
         
         Args:
             file_path: 导出文件路径
@@ -291,15 +290,17 @@ class BlocksTabManager(QObject):
         Returns:
             bool: 是否导出成功
         """
-        training_recorder = self.get_training_recorder()
-        if training_recorder:
-            try:
-                training_recorder.save_records(file_path)
-                return True
-            except Exception as e:
-                print(f"BlocksTabManager: 导出训练数据失败: {e}")
-                return False
+        print("BlocksTabManager: Excel导出功能已禁用，不再保存xlsx文件")
         return False
+        # training_recorder = self.get_training_recorder()
+        # if training_recorder:
+        #     try:
+        #         training_recorder.save_records(file_path)
+        #         return True
+        #     except Exception as e:
+        #         print(f"BlocksTabManager: 导出训练数据失败: {e}")
+        #         return False
+        # return False
     
     def clear_training_data(self):
         """

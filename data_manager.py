@@ -758,6 +758,7 @@ class DataManager:
         
         # 获取当前阶段
         current_stage = self.patient_mapping_data.get('current_stage', 1)
+        print(current_stage)
         
         # 获取该阶段的原始值和目标值
         original_values = self.patient_mapping_data.get('original_values', {}).get(current_stage, [])

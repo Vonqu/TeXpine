@@ -31,6 +31,7 @@ class BlocksTab(QWidget):
     
     # ====== 对外信号 ======
     alert_signal = pyqtSignal(str)
+    sensor_params_update_requested = pyqtSignal(str, str, list)  # event_name, stage_key, sensor_data
     
     def __init__(self, sensor_count=10, parent=None):
         # print("BlocksTab: 开始初始化...")
@@ -213,6 +214,7 @@ class BlocksTab(QWidget):
                 self.control_panel.set_spine_type(getattr(self, 'spine_type', 'C'))
         except Exception as _e:
             print('init set_spine_type failed:', _e)
+        self.sensor_params = group
         return group
 
     def _create_stage_control_group(self):
@@ -492,22 +494,76 @@ class BlocksTab(QWidget):
         if hasattr(self, 'training_recorder'):
             try:
                 if "开始" in button_text:
-                    # 将按钮代码转换为阶段标识符
-                    if button_code == "hip_start":
-                        self.training_recorder.start_stage('3a')
-                    elif button_code == "shoulder_start":
-                        self.training_recorder.start_stage('3b')
-                    else:
-                        self.training_recorder.start_stage(str(self.stage))
+                    # 将按钮代码转换为阶段标识符（使用新的标志符系统）
+                    stage_identifier = self._get_stage_identifier_from_button(button_code, button_text)
+                    self.training_recorder.start_stage(stage_identifier)
                 elif "完成" in button_text:
-                    if button_code == "hip_complete":
-                        self.training_recorder.complete_stage('3a')
-                    elif button_code == "shoulder_complete":
-                        self.training_recorder.complete_stage('3b')
-                    else:
-                        self.training_recorder.complete_stage(str(self.stage))
+                    stage_identifier = self._get_stage_identifier_from_button(button_code, button_text)
+                    self.training_recorder.complete_stage(stage_identifier)
             except Exception as e:
                 print(f"更新训练记录器时出错: {e}")
+        
+        # 通知主窗口更新传感器参数（通过信号避免重复记录事件）
+        try:
+            stage_identifier = self._get_stage_identifier_from_button(button_code, button_text)
+            current_sensor_data = self.event_recorder.get_current_sensor_data()
+            if current_sensor_data and stage_identifier:
+                self.sensor_params_update_requested.emit(button_text, stage_identifier, current_sensor_data)
+                print(f"已发送传感器参数更新请求: {button_text} -> {stage_identifier}")
+        except Exception as e:
+            print(f"发送传感器参数更新请求时出错: {e}")
+    
+    def _get_stage_identifier_from_button(self, button_code, button_text):
+        """根据按钮代码和文本获取阶段标识符"""
+        try:
+            # 按钮代码到阶段标识符的映射
+            button_to_stage_map = {
+                # 骨盆前后翻转（阶段1）
+                "training_start": "pelvis_rotation",
+                "training_complete": "pelvis_rotation",
+                
+                # 脊柱曲率矫正
+                "correction_start": "spine_curvature_single",  # C型单段
+                "correction_complete": "spine_curvature_single",
+                "correction_up_start": "spine_curvature_upper",  # S型上段
+                "correction_up_complete": "spine_curvature_upper",
+                "correction_down_start": "spine_curvature_lower",  # S型下段
+                "correction_down_complete": "spine_curvature_lower",
+                
+                # 骨盆左右倾斜（阶段3）
+                "hip_start": "pelvis_tilt",
+                "hip_complete": "pelvis_tilt",
+                
+                # 肩部左右倾斜（阶段4）
+                "shoulder_start": "shoulder_tilt",
+                "shoulder_complete": "shoulder_tilt"
+            }
+            
+            # 根据按钮代码获取标识符
+            stage_identifier = button_to_stage_map.get(button_code)
+            if stage_identifier:
+                return stage_identifier
+            
+            # 如果按钮代码映射不到，根据当前阶段和按钮文本推断
+            if "胸段" in button_text:
+                return "spine_curvature_upper"
+            elif "腰段" in button_text:
+                return "spine_curvature_lower"
+            elif "训练" in button_text or "阶段" in button_text:
+                return "pelvis_rotation"
+            elif "矫正" in button_text:
+                return "spine_curvature_single"
+            elif "沉髋" in button_text or "髋" in button_text:
+                return "pelvis_tilt"
+            elif "沉肩" in button_text or "肩" in button_text:
+                return "shoulder_tilt"
+            
+            # 默认回退到数字阶段（兼容旧系统）
+            return str(self.stage)
+            
+        except Exception as e:
+            print(f"获取阶段标识符时出错: {e}")
+            return str(self.stage)
     
     def _update_event_buttons_for_stage(self, stage):
         """根据当前阶段更新事件按钮显示"""
@@ -746,7 +802,6 @@ class BlocksTab(QWidget):
                 
         except Exception as e:
             print(f"强制更新传感器数据时出错: {e}")
-
     def _record_event(self, event_name, event_code=None):
         """记录训练事件（增强版：收集更详细的校准数据）"""
         from datetime import datetime
@@ -937,16 +992,7 @@ class BlocksTab(QWidget):
                         if total_weight > 0:
                             combined_value = weighted_sum / total_weight
                             calibration_data['combined_value'] = combined_value
-                            
-                            # 添加校准状态评估
-                            if '完成' in event_name:
-                                if combined_value < 0.05:
-                                    calibration_data['calibration_status'] = "🟢 校准效果: 优秀"
-                                elif combined_value < 0.1:
-                                    calibration_data['calibration_status'] = "🟡 校准效果: 良好"  
-                                else:
-                                    calibration_data['calibration_status'] = "🔴 校准效果: 需改善"
-                            elif '开始' in event_name:
+                            if '开始' in event_name:
                                 calibration_data['calibration_status'] = "🔧 开始校准记录"
                 
             except Exception as e:
@@ -1250,23 +1296,23 @@ class BlocksTab(QWidget):
 
     def _connect_training_recorder_signals(self):
         """连接训练记录器信号"""
-        # 连接阶段按钮到训练记录器
+        # 连接阶段按钮到训练记录器（使用新的标志符）
         if hasattr(self, 'start_training_btn'):
-            self.start_training_btn.clicked.connect(lambda: self.training_recorder.start_stage(1))
+            self.start_training_btn.clicked.connect(lambda: self.training_recorder.start_stage('pelvis_rotation'))
         if hasattr(self, 'complete_stage_btn'):
-            self.complete_stage_btn.clicked.connect(lambda: self.training_recorder.complete_stage(1))
+            self.complete_stage_btn.clicked.connect(lambda: self.training_recorder.complete_stage('pelvis_rotation'))
         if hasattr(self, 'start_correction_btn'):
-            self.start_correction_btn.clicked.connect(lambda: self.training_recorder.start_stage(2))
+            self.start_correction_btn.clicked.connect(lambda: self.training_recorder.start_stage('spine_curvature_single'))
         if hasattr(self, 'complete_correction_btn'):
-            self.complete_correction_btn.clicked.connect(lambda: self.training_recorder.complete_stage(2))
+            self.complete_correction_btn.clicked.connect(lambda: self.training_recorder.complete_stage('spine_curvature_single'))
         if hasattr(self, 'start_hip_btn'):
-            self.start_hip_btn.clicked.connect(lambda: self.training_recorder.start_stage('3a'))
+            self.start_hip_btn.clicked.connect(lambda: self.training_recorder.start_stage('pelvis_tilt'))
         if hasattr(self, 'end_hip_btn'):
-            self.end_hip_btn.clicked.connect(lambda: self.training_recorder.complete_stage('3a'))
+            self.end_hip_btn.clicked.connect(lambda: self.training_recorder.complete_stage('pelvis_tilt'))
         if hasattr(self, 'start_shoulder_btn'):
-            self.start_shoulder_btn.clicked.connect(lambda: self.training_recorder.start_stage('3b'))
+            self.start_shoulder_btn.clicked.connect(lambda: self.training_recorder.start_stage('shoulder_tilt'))
         if hasattr(self, 'end_shoulder_btn'):
-            self.end_shoulder_btn.clicked.connect(lambda: self.training_recorder.complete_stage('3b'))
+            self.end_shoulder_btn.clicked.connect(lambda: self.training_recorder.complete_stage('shoulder_tilt'))
     
     def update_spine_type(self, spine_type):
         """更新脊柱类型"""
@@ -1756,8 +1802,9 @@ class BlocksTab(QWidget):
             print(f"  控制器实时数据: {ctrl_sensor_values[:5]}...")
             
             # 使用控制器中的实时数据而不是事件记录器的数据
-            data_to_use = ctrl_sensor_values if len(ctrl_sensor_values) >= len(sensor_values) else sensor_values
-            print(f"  使用数据源: {'控制器实时数据' if data_to_use == ctrl_sensor_values else '事件记录器数据'}")
+            data_to_use = ctrl_sensor_values 
+            # if len(ctrl_sensor_values) >= len(sensor_values) else sensor_values
+            # print(f"  使用数据源: {'控制器实时数据' if data_to_use == ctrl_sensor_values else '事件记录器数据'}")
                 
             updated_count = 0
             # 只更新被选中的传感器对应的值
@@ -1823,8 +1870,27 @@ class BlocksTab(QWidget):
 
         # 完成阶段后把数据写进训练记录器
         if ("完成阶段" in (event_name or "")) and hasattr(self, 'training_recorder') and self.training_recorder:
-            self.training_recorder.complete_stage(self.stage, sensor_values)
-            
+            # 使用新的标志符系统
+            stage_identifier = self._get_stage_identifier_for_current_stage()
+            self.training_recorder.complete_stage(stage_identifier, sensor_values)
+    
+    def _get_stage_identifier_for_current_stage(self):
+        """获取当前阶段的标志符"""
+        # 阶段编号到标志符的映射
+        stage_map = {
+            1: 'pelvis_rotation',
+            2: 'spine_curvature_single',  # C型默认
+            3: 'pelvis_tilt',
+            4: 'shoulder_tilt'
+        }
+        
+        # 对于S型脊柱，需要根据具体情况调整阶段2
+        if getattr(self, 'spine_type', 'C') == 'S' and self.stage == 2:
+            # 这里需要进一步区分是胸段还是腰段，暂时使用单段
+            return 'spine_curvature_single'
+        
+        return stage_map.get(self.stage, 'pelvis_rotation')
+
     def set_sensor_count(self, count):
         """设置传感器数量"""
         if count == self.sensor_count:

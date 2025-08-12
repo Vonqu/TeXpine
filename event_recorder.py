@@ -190,29 +190,30 @@ class EventRecorder(QObject):
             traceback.print_exc()
             return False
     
-    def _is_duplicate_event(self, event_name, stage, current_timestamp, time_threshold=3.0):
+    def _is_duplicate_event(self, event_name, stage, current_timestamp, time_threshold=1.0):
         """
-        检查是否为重复事件
+        检查是否为重复事件（改进版：更严格的重复检测）
         
         Args:
             event_name: 事件名称
             stage: 训练阶段
             current_timestamp: 当前时间戳
-            time_threshold: 时间阈值（秒），默认3秒
+            time_threshold: 时间阈值（秒），调整为1秒以更好检测重复
         
         Returns:
             bool: 如果是重复事件返回True，否则返回False
         """
         try:
             # 检查最近的事件历史
-            for event in reversed(self.event_history[-10:]):  # 只检查最近10个事件
+            for event in reversed(self.event_history[-5:]):  # 只检查最近5个事件，减少检查范围
                 # 检查事件名称和阶段是否相同
                 if (event.get('event_name') == event_name and 
                     event.get('stage') == stage):
                     
-                    # 检查时间间隔
+                    # 检查时间间隔（更严格的检测）
                     time_diff = abs(current_timestamp - event.get('timestamp', 0))
                     if time_diff < time_threshold:
+                        print(f"检测到重复事件: {event_name} (阶段: {stage}), 时间间隔: {time_diff:.3f}秒")
                         return True
             
             return False

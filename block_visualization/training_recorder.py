@@ -124,9 +124,9 @@ class TrainingRecorder(QWidget):
             # 实时更新UI显示
             self._update_record_display()
             
-            # 自动保存标准文件（如果是完成阶段事件）
-            if 'event_name' in data and '完成' in data.get('event_name', ''):
-                self._save_standard_file(data)
+            # 自动保存标准文件功能已禁用
+            # if 'event_name' in data and '完成' in data.get('event_name', ''):
+            #     self._save_standard_file(data)
             
             print(f"TrainingRecorder: 已添加记录 {record_key}")
             
@@ -173,7 +173,7 @@ class TrainingRecorder(QWidget):
                 # 显示误差范围
                 if 'error_range' in data:
                     error_range = data['error_range']
-                    display_text += f"  🎯 误差范围: {error_range:.3f}\n"
+                    display_text += f"  🎯 误差范围: {error_range:.2f}\n"
                 
                 # 显示校准计算结果（增强功能）
                 calibration_result = self._calculate_calibration_display(data)
@@ -184,12 +184,7 @@ class TrainingRecorder(QWidget):
                 normalized_result = self._calculate_normalized_display(data)
                 if normalized_result:
                     display_text += normalized_result
-                
-                # 显示校准效果评估
-                evaluation_result = self._evaluate_calibration_effect(data)
-                if evaluation_result:
-                    display_text += evaluation_result
-                
+
                 display_text += "─" * 50 + "\n"
             
             self.record_display.setPlainText(display_text)
@@ -215,17 +210,12 @@ class TrainingRecorder(QWidget):
             event_name = data.get('event_name', '')
             
             # 如果是校准相关事件，显示OV/BV信息
-            if any(keyword in event_name for keyword in ['开始', '完成', '校准']):
+            if any(keyword in event_name for keyword in ['开始', '完成']):
                 if '开始' in event_name:
                     result_text += f"  🔧 校准开始 - 记录原始值(OV)\n"
                 elif '完成' in event_name:
                     result_text += f"  ✅ 校准完成 - 更新最佳值(BV)\n"
                     
-                    # 显示校准前后对比（如果有历史数据）
-                    if hasattr(self, '_last_original_values'):
-                        improvement = self._calculate_improvement(data)
-                        if improvement:
-                            result_text += f"  📈 改善程度: {improvement}\n"
             
             return result_text
             
@@ -276,71 +266,11 @@ class TrainingRecorder(QWidget):
             print(f"计算归一化显示信息时出错: {e}")
             return ""
     
-    def _evaluate_calibration_effect(self, data):
-        """评估校准效果"""
-        try:
-            result_text = ""
-            
-            error_range = data.get('error_range', 0)
-            event_name = data.get('event_name', '')
-            
-            # 校准效果评估
-            if '完成' in event_name:
-                if error_range < 0.05:
-                    result_text += f"  🟢 校准效果: 优秀 (误差 < 5%)\n"
-                elif error_range < 0.1:
-                    result_text += f"  🟡 校准效果: 良好 (误差 < 10%)\n"
-                else:
-                    result_text += f"  🔴 校准效果: 需改善 (误差 ≥ 10%)\n"
-                
-                # 给出建议
-                if error_range > 0.1:
-                    result_text += f"  💡 建议: 重新调整传感器权重或重新校准\n"
-            
-            return result_text
-            
-        except Exception as e:
-            print(f"评估校准效果时出错: {e}")
-            return ""
     
-    def _calculate_improvement(self, data):
-        """计算改善程度"""
-        try:
-            # 这里应该比较校准前后的数据
-            # 由于需要历史数据，暂时返回模拟结果
-            return "传感器稳定性提升 15%"
-        except:
-            return None
-    
-    def _save_standard_file(self, data):
-        """保存标准文件（每次完成阶段时自动保存）"""
-        try:
-            stage = data.get('stage', 1)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            
-            # 生成标准文件名
-            filename = f"standard_stage{stage}_{timestamp}.json"
-            filepath = os.path.join(self.save_directory, filename)
-            
-            # 保存标准数据
-            standard_data = {
-                'stage': stage,
-                'event_name': data.get('event_name', ''),
-                'timestamp': data.get('timestamp', 0),
-                'raw_sensor_data': data.get('raw_sensor_data', []),
-                'sensor_weights': data.get('sensor_weights', []),
-                'error_range': data.get('error_range', 0.1),
-                'recorded_at': data.get('recorded_at', ''),
-                'visualization_state': data.get('visualization_state', {})
-            }
-            
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(standard_data, f, ensure_ascii=False, indent=2)
-            
-            print(f"TrainingRecorder: 已保存标准文件 {filename}")
-            
-        except Exception as e:
-            print(f"TrainingRecorder: 保存标准文件时出错 - {e}")
+    # def _save_standard_file(self, data):
+    #     """保存标准文件（已禁用）"""
+    #     print("TrainingRecorder: 标准文件保存功能已禁用")
+    #     pass
     
     def save_records(self, export_path=None):
         """保存所有记录到Excel文件，可选自定义导出路径"""
@@ -423,8 +353,9 @@ class TrainingRecorder(QWidget):
             files.sort(reverse=True)
             latest_file = os.path.join(self.save_directory, files[0])
             
-            with open(latest_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            # with open(latest_file, 'r', encoding='utf-8') as f: # 已移除，不再使用JSON文件保存功能
+            #     return json.load(f) # 已移除，不再使用JSON文件保存功能
+            return None # 已移除，不再使用JSON文件保存功能
                 
         except Exception as e:
             print(f"TrainingRecorder: 获取标准文件时出错 - {e}")
@@ -504,26 +435,13 @@ class TrainingRecorder(QWidget):
         self._update_record_display()
         self.record_updated.emit(record_key)
         
-        # 实时保存校准数据
-        self._save_calibration_data(record)
+        # 校准数据保存功能已禁用
+        # self._save_calibration_data(record)
     
-    def _save_calibration_data(self, record):
-        """实时保存校准数据"""
-        try:
-            # 创建校准数据保存目录
-            calibration_dir = os.path.join(os.path.dirname(__file__), '..', 'saving_data', 'calibration')
-            os.makedirs(calibration_dir, exist_ok=True)
-            
-            # 保存单次校准记录
-            filename = f"calibration_stage_{record['stage']}_{record['sequence_number']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            filepath = os.path.join(calibration_dir, filename)
-            
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(record, f, ensure_ascii=False, indent=2)
-            
-            print(f"校准数据已保存: {filepath}")
-        except Exception as e:
-            print(f"保存校准数据失败: {e}")
+    # def _save_calibration_data(self, record):
+    #     """校准数据保存功能已禁用"""
+    #     print("TrainingRecorder: 校准数据保存功能已禁用")
+    #     pass
     
     def get_records_by_stage(self, stage):
         """获取指定阶段的所有记录"""
@@ -549,10 +467,9 @@ class TrainingRecorder(QWidget):
             # 过滤掉标准记录，只导出原始完成记录
             export_records = {k: v for k, v in self.records.items() if not v.get('is_standard', False)}
             
-            with open(export_path, 'w', encoding='utf-8') as f:
-                json.dump(export_records, f, ensure_ascii=False, indent=2)
-            
-            print(f"训练记录已导出: {export_path}")
+            # with open(export_path, 'w', encoding='utf-8') as f: # 已移除，不再使用JSON文件保存功能
+            #     json.dump(export_records, f, ensure_ascii=False, indent=2) # 已移除，不再使用JSON文件保存功能
+            # print(f"训练记录已导出: {export_path}") # 已移除，不再使用JSON文件保存功能
             return export_path
         except Exception as e:
             print(f"导出训练记录失败: {e}")

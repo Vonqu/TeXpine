@@ -185,6 +185,8 @@ class PatientBlocksTab(QWidget):
         self.controllers = {
             'gray_rotation': PatientSensorController("骨盆前后翻转", sensor_count),    # 阶段1
             'blue_curvature': PatientSensorController("脊柱曲率矫正", sensor_count),   # 阶段2  
+            'blue_curvature_up': PatientSensorController("脊柱曲率矫正·胸段", sensor_count),   # S型阶段2A
+            'blue_curvature_down': PatientSensorController("脊柱曲率矫正·腰段", sensor_count), # S型阶段2B
             'gray_tilt': PatientSensorController("骨盆左右倾斜", sensor_count),        # 阶段3沉髋
             'green_tilt': PatientSensorController("肩部左右倾斜", sensor_count)        # 阶段3沉肩
         }
@@ -205,6 +207,8 @@ class PatientBlocksTab(QWidget):
             'gray_rotation': 0,
             'gray_tilt': 0,
             'blue_curvature': 0,
+            'blue_curvature_up': 0,
+            'blue_curvature_down': 0,
             'green_tilt': 0
         }
         
@@ -1053,9 +1057,27 @@ class PatientBlocksTab(QWidget):
                         gray_tilt=params['gray_tilt'],
                         green_tilt=params['green_tilt']
                     )
-                elif hasattr(blocks_widget, 'update'):
-                    # 如果是简单的QWidget，直接触发重绘
-                    blocks_widget.update()
+                else:
+                    # 直接设置属性并重绘，保证无update_visualization时也能工作
+                    try:
+                        value = self.visualizer_params.get(controller_name, 0)
+                        if controller_name == 'gray_rotation':
+                            setattr(blocks_widget, 'gray_block_rotation', float(value))
+                        elif controller_name == 'blue_curvature':
+                            setattr(blocks_widget, 'blue_blocks_curvature', float(value))
+                        elif controller_name == 'blue_curvature_up':
+                            setattr(blocks_widget, 'blue_blocks_curvature_up', float(value))
+                        elif controller_name == 'blue_curvature_down':
+                            setattr(blocks_widget, 'blue_blocks_curvature_down', float(value))
+                        elif controller_name == 'gray_tilt':
+                            # 归一化转角度
+                            setattr(blocks_widget, 'gray_block_tilt', float(value) * 30.0)
+                        elif controller_name == 'green_tilt':
+                            setattr(blocks_widget, 'green_block_tilt', float(value) * 30.0)
+                    except Exception:
+                        pass
+                    if hasattr(blocks_widget, 'update'):
+                        blocks_widget.update()
         except Exception as e:
             print(f"新方法更新积木可视化失败: {e}")
 
@@ -1571,24 +1593,46 @@ class PatientBlocksTab(QWidget):
     def _controller_for_current_stage(self):
         """根据当前阶段和脊柱类型确定对应的控制器"""
         if getattr(self, 'spine_type', 'C') == 'S':
-            # S型脊柱5阶段
+            # S型脊柱 - 使用新的标志符映射
             stage_controller_map = {
-                1: 'gray_rotation',
-                2: 'blue_curvature_up', 
-                3: 'blue_curvature_down',
-                4: 'gray_tilt',
-                5: 'green_tilt'
+                1: 'gray_rotation',      # pelvis_rotation
+                2: 'blue_curvature_up',  # spine_curvature_upper (胸段)
+                3: 'blue_curvature_down', # spine_curvature_lower (腰段)
+                4: 'gray_tilt',          # pelvis_tilt
+                5: 'green_tilt'          # shoulder_tilt
             }
         else:
-            # C型脊柱4阶段
+            # C型脊柱 - 使用新的标志符映射
             stage_controller_map = {
-                1: 'gray_rotation',
-                2: 'blue_curvature',
-                3: 'gray_tilt', 
-                4: 'green_tilt'
+                1: 'gray_rotation',     # pelvis_rotation
+                2: 'blue_curvature',    # spine_curvature_single
+                3: 'gray_tilt',         # pelvis_tilt
+                4: 'green_tilt'         # shoulder_tilt
             }
         
         return stage_controller_map.get(self.current_stage, 'gray_rotation')
+    
+    def _get_stage_identifier_for_stage(self, stage_num):
+        """根据阶段编号和脊柱类型获取标志符"""
+        if getattr(self, 'spine_type', 'C') == 'S':
+            # S型脊柱标志符映射
+            stage_identifier_map = {
+                1: 'pelvis_rotation',
+                2: 'spine_curvature_upper',
+                3: 'spine_curvature_lower',
+                4: 'pelvis_tilt',
+                5: 'shoulder_tilt'
+            }
+        else:
+            # C型脊柱标志符映射
+            stage_identifier_map = {
+                1: 'pelvis_rotation',
+                2: 'spine_curvature_single',
+                3: 'pelvis_tilt',
+                4: 'shoulder_tilt'
+            }
+        
+        return stage_identifier_map.get(stage_num, 'pelvis_rotation')
     
     def connect_stage_signals(self, callback):
         """为主窗口提供连接阶段信号的接口"""
