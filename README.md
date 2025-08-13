@@ -105,8 +105,11 @@ TeXpine-main/
 ## UDP 发送（Unity 等外部系统）
 - 网络设置在控制面板里配置：启用、主机、端口；`main_window.py` 驱动 `SpineDataSender`
 - 发送频率限为约 50Hz（可在主窗口 `_udp_send_hz` 调整）
+- **根据脊柱类型发送不同数量的控制器参数**：
+  - **C型脊柱**：4个控制器参数 (gray_rotation, blue_curvature, gray_tilt, green_tilt)
+  - **S型脊柱**：5个控制器参数 (gray_rotation, blue_curvature_up, blue_curvature_down, gray_tilt, green_tilt)
 - 字段与示例
-  - 医生端（默认 `SpineDataSender.send_spine_data`）：
+  - 医生端C型脊柱（`SpineDataSender.send_spine_data`）：
     ```json
     {
       "timestamp": 1731122334.123,
@@ -123,29 +126,56 @@ TeXpine-main/
         "gray_tilt": 0.1,
         "green_tilt": 0.1
       },
-      "training_indicators": [0..5 共6个指标],
-      "spine_curve": 0.33,            // C型：blue_curvature；S型：max(上/下)
+      "spine_curve": 0.31,               // C型：blue_curvature值
       "sensor_count": 10,
-      "events_file_loaded": true
+      "events_file_loaded": true,
+      "spine_type": "C",
+      "spine_direction": "left"
     }
     ```
-  - 患者端（`process_sensor_data` 内构造简化包）：
+  - 医生端S型脊柱（`SpineDataSender.send_spine_data`）：
+    ```json
+    {
+      "timestamp": 1731122334.123,
+      "sensor_data": [2500, 2510, ...],
+      "stage_values": {
+        "gray_rotation": 0.42,
+        "blue_curvature_up": 0.31,
+        "blue_curvature_down": 0.28,
+        "gray_tilt": 0.55,
+        "green_tilt": 0.20
+      },
+      "stage_error_ranges": {
+        "gray_rotation": 0.1,
+        "blue_curvature_up": 0.1,
+        "blue_curvature_down": 0.1,
+        "gray_tilt": 0.1,
+        "green_tilt": 0.1
+      },
+      "spine_curve": 0.31,               // S型：max(blue_curvature_up, blue_curvature_down)
+      "sensor_count": 10,
+      "events_file_loaded": true,
+      "spine_type": "S",
+      "spine_direction": "lumbar_left"
+    }
+    ```
+  - 患者端（根据脊柱类型自动适配）：
     ```json
     {
       "timestamp": 1731122334.567,
       "sensor_data": [2500, 2510, ...],
       "stage_values": {
-        "gray_rotation": 0.42,
-        "blue_curvature": 0.31,
-        "gray_tilt": 0.55,
-        "green_tilt": 0.20
+        // C型：4个参数或S型：5个参数
       },
-      "stage_error_ranges": {"gray_rotation":0.1,"blue_curvature":0.1,"gray_tilt":0.1,"green_tilt":0.1},
+      "stage_error_ranges": {
+        // 对应的误差范围
+      },
       "sensor_count": 10,
-      "events_file_loaded": true
+      "events_file_loaded": true,
+      "spine_type": "C" // 或 "S"
     }
     ```
-- 脊柱类型/方向：`SpineDataSender.set_spine_type("C"|"S")` 与 `set_spine_direction("L/R/...")` 由控制面板广播同步；影响 `spine_curve` 的计算
+- 脊柱类型/方向：由控制面板广播同步到所有组件，影响UDP数据包的结构和 `spine_curve` 的计算
 
 ## 性能与稳定性
 - UI 限频刷新：约 30Hz（`_ui_refresh_hz`），由 `_ui_refresh_timer` 统一驱动三个图表与 Blocks/Patient 更新

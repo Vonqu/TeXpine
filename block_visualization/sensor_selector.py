@@ -279,6 +279,9 @@ class SensorSelector(QGroupBox):
         
         if total_weight > 0:
             combined_value = weighted_sum / total_weight
+            
+            # 添加0-1范围限制，确保combined_value不超出合理范围
+            combined_value = max(0.0, min(1.0, combined_value))
 
             
             self.current_value = combined_value

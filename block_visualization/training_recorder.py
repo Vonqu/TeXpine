@@ -247,6 +247,8 @@ class TrainingRecorder(QWidget):
                 # 使用真实的加权组合值
                 if 'combined_value' in calibration_data:
                     combined_value = calibration_data['combined_value']
+                    # 确保combined_value在0-1范围内
+                    combined_value = max(0.0, min(1.0, combined_value))
                     result_text += f"  🎯 加权组合值: {combined_value:.3f}\n"
                 else:
                     # 如果没有预计算的组合值，则计算
@@ -254,6 +256,8 @@ class TrainingRecorder(QWidget):
                     total_weight = sum(w for w in sensor_weights if w > 0)
                     if total_weight > 0:
                         combined_value = weighted_sum / total_weight
+                        # 确保combined_value在0-1范围内
+                        combined_value = max(0.0, min(1.0, combined_value))
                         result_text += f"  🎯 加权组合值: {combined_value:.3f}\n"
             
             else:

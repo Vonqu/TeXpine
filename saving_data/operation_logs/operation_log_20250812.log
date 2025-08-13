@@ -156,3 +156,46 @@
 2025-08-12 21:54:35.978 [INFO] === 新的操作记录会话开始 ===
 2025-08-12 21:54:50.999 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-12 21:54:50.999", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
 2025-08-12 21:55:20.983 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-12 21:55:20.983", "details": {"statistics": {"display_data_count": 3644, "total_data_count": 3644, "raw_data_count": 3644, "events_count": 8}}}
+2025-08-12 22:00:57.460 [INFO] === 新的操作记录会话开始 ===
+2025-08-12 22:02:03.588 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-12 22:02:03.588", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-12 22:03:34.132 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-12 22:03:34.132", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 11193, "raw_data_count": 11193, "events_count": 10}}}
+2025-08-12 22:10:05.116 [INFO] === 新的操作记录会话开始 ===
+2025-08-12 22:10:18.833 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-12 22:10:18.833", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-12 22:10:36.173 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-12 22:10:36.173", "details": {"statistics": {"display_data_count": 2089, "total_data_count": 2089, "raw_data_count": 2089, "events_count": 2}}}
+2025-08-12 22:10:37.352 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-12 22:10:37.352", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-12 22:11:21.503 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-12 22:11:21.503", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 5414, "raw_data_count": 7503, "events_count": 9}}}
+2025-08-12 22:12:00.329 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-12 22:12:00.329", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-12 22:12:15.470 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-12 22:12:15.469", "details": {"statistics": {"display_data_count": 1751, "total_data_count": 1751, "raw_data_count": 9254, "events_count": 2}}}
+2025-08-12 22:17:37.501 [INFO] === 新的操作记录会话开始 ===
+2025-08-12 22:24:44.168 [INFO] === 新的操作记录会话开始 ===
+2025-08-12 22:25:29.626 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-12 22:25:29.626", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-12 22:27:08.664 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-12 22:27:08.664", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 12185, "raw_data_count": 12185, "events_count": 15}}}
+2025-08-12 22:31:25.059 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-12 22:31:25.059", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-12 22:49:45.300 [INFO] === 新的操作记录会话开始 ===
+2025-08-12 22:50:20.327 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-12 22:50:20.326", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-12 22:51:45.598 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-12 22:51:45.598", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 10472, "raw_data_count": 10472, "events_count": 9}}}
+2025-08-12 22:51:50.409 [INFO] {"operation": "mode_change", "timestamp": "2025-08-12 22:51:50.409", "details": {"from": "doctor", "to": "patient"}}
+2025-08-12 22:51:50.412 [INFO] {"operation": "mode_change", "timestamp": "2025-08-12 22:51:50.412", "details": {"from": "patient", "to": "patient"}}
+2025-08-12 22:51:55.077 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-12 22:51:55.077", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-08-12 22:53:46.917 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-12 22:53:46.917", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 13844, "raw_data_count": 24320, "events_count": 9}}}
+2025-08-12 23:06:23.749 [INFO] === 新的操作记录会话开始 ===
+2025-08-12 23:06:50.948 [INFO] === 新的操作记录会话开始 ===
+2025-08-12 23:07:05.299 [INFO] {"operation": "mode_change", "timestamp": "2025-08-12 23:07:05.299", "details": {"from": "doctor", "to": "patient"}}
+2025-08-12 23:07:05.303 [INFO] {"operation": "mode_change", "timestamp": "2025-08-12 23:07:05.303", "details": {"from": "patient", "to": "patient"}}
+2025-08-12 23:07:06.383 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-12 23:07:06.383", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-08-12 23:10:30.855 [INFO] === 新的操作记录会话开始 ===
+2025-08-12 23:11:02.407 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-12 23:11:02.407", "details": {"source": "serial", "settings": {"port": "COM11", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-12 23:11:07.658 [ERROR] {"error_type": "serial", "message": "串口读取错误: could not open port 'COM11': OSError(22, '信号灯超时时间已到', None, 121)", "timestamp": "2025-08-12 23:11:07.658"}
+2025-08-12 23:11:13.424 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-12 23:11:13.424", "details": {"statistics": {"display_data_count": 0, "total_data_count": 0, "raw_data_count": 0, "events_count": 0}}}
+2025-08-12 23:11:21.207 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-12 23:11:21.207", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-12 23:12:02.553 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-12 23:12:02.553", "details": {"statistics": {"display_data_count": 4969, "total_data_count": 4969, "raw_data_count": 4969, "events_count": 8}}}
+2025-08-12 23:12:12.914 [INFO] {"operation": "mode_change", "timestamp": "2025-08-12 23:12:12.914", "details": {"from": "doctor", "to": "patient"}}
+2025-08-12 23:12:12.916 [INFO] {"operation": "mode_change", "timestamp": "2025-08-12 23:12:12.916", "details": {"from": "patient", "to": "patient"}}
+2025-08-12 23:12:13.558 [INFO] {"operation": "mode_change", "timestamp": "2025-08-12 23:12:13.558", "details": {"from": "patient", "to": "doctor"}}
+2025-08-12 23:12:13.559 [INFO] {"operation": "mode_change", "timestamp": "2025-08-12 23:12:13.559", "details": {"from": "doctor", "to": "doctor"}}
+2025-08-12 23:12:19.268 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-12 23:12:19.268", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "doctor"}}}
+2025-08-12 23:13:20.608 [INFO] {"operation": "acquisition_stop", "timestamp": "2025-08-12 23:13:20.608", "details": {"statistics": {"display_data_count": 5000, "total_data_count": 7498, "raw_data_count": 12467, "events_count": 11}}}
+2025-08-12 23:13:48.379 [INFO] {"operation": "mode_change", "timestamp": "2025-08-12 23:13:48.379", "details": {"from": "doctor", "to": "patient"}}
+2025-08-12 23:13:48.382 [INFO] {"operation": "mode_change", "timestamp": "2025-08-12 23:13:48.382", "details": {"from": "patient", "to": "patient"}}
+2025-08-12 23:13:53.819 [INFO] {"operation": "acquisition_start", "timestamp": "2025-08-12 23:13:53.819", "details": {"source": "serial", "settings": {"port": "COM6", "baud_rate": 115200, "num_sensors": 10, "duration": null, "mode": "patient"}}}
+2025-08-12 23:23:08.200 [ERROR] {"error_type": "serial", "message": "串口读取错误: ClearCommError failed (PermissionError(13, '拒绝访问。', None, 5))", "timestamp": "2025-08-12 23:23:08.200"}

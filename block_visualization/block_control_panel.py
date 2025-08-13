@@ -56,7 +56,7 @@ class BlockControlPanel(QWidget):
         self.blue_curvature_up = SensorSelector("脊柱曲率矫正·胸段", self.sensor_count, special_mode=True)
         self.blue_curvature_down = SensorSelector("脊柱曲率矫正·腰段", self.sensor_count, special_mode=True)
 
-        # 统一尺寸（调整高度以适应10个传感器）
+        # 统一尺寸（调整高度以适应10个传感器，减小宽度）
         for ctrl in [
             self.gray_rotation, self.blue_curvature,
             self.blue_curvature_up, self.blue_curvature_down,
@@ -64,7 +64,7 @@ class BlockControlPanel(QWidget):
         ]:
             try:
                 ctrl.setMinimumHeight(480)  # 增加高度以适应更多传感器
-                ctrl.setFixedWidth(300)
+                ctrl.setFixedWidth(280)  # 减小宽度从300到280
             except Exception:
                 pass
 
@@ -120,7 +120,7 @@ class BlockControlPanel(QWidget):
         # 切换后可以重置一次高亮到当前阶段（由外部再调用 highlight_stage）
 
     def highlight_stage(self, stage: int):
-        """根据阶段高亮某张卡片（C：4 阶段；S：5 阶段）"""
+        """根据阶段高亮某张卡片（C：4 阶段；S：4 阶段）"""
         # 先全部取消
         for w in [
             getattr(self, "gray_rotation", None),

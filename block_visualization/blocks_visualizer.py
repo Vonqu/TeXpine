@@ -143,6 +143,40 @@ class BlocksVisualizer(QWidget):
                 painter.drawRect(-int(blue_width/2), -int(blue_height/2), int(blue_width), int(blue_height))
                 painter.restore()
 
+    def update_visualization(self, gray_rotation=0, blue_curvature=0, blue_curvature_up=0, blue_curvature_down=0, gray_tilt=0, green_tilt=0):
+        """更新可视化参数并重绘"""
+        try:
+            # 更新灰色方块参数
+            self.gray_block_rotation = float(gray_rotation)
+            self.gray_block_tilt = float(gray_tilt) * 30.0  # 转换为角度
+            
+            # 更新绿色方块参数
+            self.green_block_tilt = float(green_tilt) * 30.0  # 转换为角度
+            
+            # 更新蓝色方块参数（根据脊柱类型）
+            if str(getattr(self, 'spine_type', 'C')).upper() == 'S':
+                # S型脊柱：使用分段参数
+                self.blue_blocks_curvature_up = float(blue_curvature_up)
+                self.blue_blocks_curvature_down = float(blue_curvature_down)
+                # 为兼容性也设置单一参数（使用最大值）
+                self.blue_blocks_curvature = float(max(blue_curvature_up, blue_curvature_down))
+            else:
+                # C型脊柱：使用单一参数
+                self.blue_blocks_curvature = float(blue_curvature)
+            
+            # 触发重绘
+            self.update()
+            
+        except Exception as e:
+            print(f"更新可视化参数失败: {e}")
+    
+    def set_spine_config(self, spine_type, spine_direction):
+        """设置脊柱配置"""
+        self.spine_type = spine_type
+        self.spine_direction = spine_direction
+        # 触发重绘以应用新配置
+        self.update()
+
     def update_blue_blocks_curvature(self, t):
         """根据t值更新蓝色方块的曲率，t由第二阶段的加权结果控制"""
         # 二次贝塞尔曲线参数

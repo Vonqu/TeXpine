@@ -1,4 +1,3 @@
-
 """
 患者积木可视化标签页模块（修改版）
 ==================================
@@ -143,35 +142,31 @@ class PatientBlocksTab(QWidget):
         # ====== 新增：脊柱类型和方向配置 ======
         self.spine_type = "C"  # 默认C型
         self.spine_direction = "left"  # 默认左凸
-        # self.max_stages = 5 if self.spine_type=='S' else 4  # 根据脊柱类型调整
-        self.max_stages = 4  # 统一 4 个阶段
+        # C型和S型脊柱都是4个阶段
+        self.max_stages = 4  # 根据脊柱类型调整
         
         # ====== 阶段配置字典 ======
         self.stage_configs = {
             "C": {
                 "max_stages": 4,
-                
-"stage_descriptions": {
-    1: "阶段1：骨盆前后翻转",
-    2: "阶段2：脊柱曲率矫正-单段",
-    3: "阶段3：骨盆左右倾斜",
-    4: "阶段4：肩部左右倾斜"
-}
-
-                
+                "stage_descriptions": {
+                    1: "阶段1：骨盆前后翻转",
+                    2: "阶段2：脊柱曲率矫正-单段",
+                    3: "阶段3：骨盆左右倾斜",
+                    4: "阶段4：肩部左右倾斜"
+                }
             },
-            
-"S": {
-    "max_stages": 4,
-    "stage_descriptions": {
-        1: "阶段1：骨盆前后翻转",
-        2: "阶段2：脊柱曲率矫正(胸/腰)",
-        3: "阶段3：骨盆左右倾斜",
-        4: "阶段4：肩部左右倾斜"
-    },
-    "sub_stages": {}
-}
-}
+            "S": {
+                "max_stages": 4,  # S型脊柱4个阶段
+                "stage_descriptions": {
+                    1: "阶段1：骨盆前后翻转",
+                    2: "阶段2：脊柱曲率矫正（胸段+腰段）", 
+                    3: "阶段3：骨盆左右倾斜",
+                    4: "阶段4：肩部左右倾斜"
+                },
+                "sub_stages": {}
+            }
+        }
 
         
         # ====== 患者端训练相关属性 ======
@@ -351,7 +346,7 @@ class PatientBlocksTab(QWidget):
             self.spine_direction = "left"
         elif button == self.s_type_radio:
             self.spine_type = "S"
-            self.max_stages = 4  # 修复：S型应该是5阶段
+            self.max_stages = 4  # 修复：S型应该是4阶段
             # 显示S型方向选择，隐藏C型
             self.c_direction_widget.hide()
             self.s_direction_widget.show()
@@ -362,11 +357,12 @@ class PatientBlocksTab(QWidget):
         print(f"脊柱类型已更改为: {self.spine_type}型，最大阶段数: {self.max_stages}")
         self._update_controller_configs_for_spine_type()
         self._update_visualizer_for_spine_config()
-        # 切换类型后重建训练卡片
+        # 切换类型后重建训练卡片和积木可视化模块
         try:
             self._rebuild_training_modules()
+            self._rebuild_blocks_modules()
         except Exception as _e:
-            print('重建训练卡片失败:', _e)
+            print('重建训练卡片和积木模块失败:', _e)
     
     def _on_spine_direction_changed(self, button):
         """处理脊柱方向变化"""
@@ -395,6 +391,33 @@ class PatientBlocksTab(QWidget):
         """根据脊柱配置更新可视化效果"""
         # 这里可以根据脊柱类型和方向调整可视化参数
         print(f"正在为{self.spine_type}型{self.spine_direction}方向脊柱更新可视化效果...")
+        
+        # 更新所有积木组件的脊柱配置
+        if hasattr(self, 'blocks_widgets') and self.blocks_widgets:
+            for controller_name, blocks_widget in self.blocks_widgets.items():
+                if hasattr(blocks_widget, 'set_spine_config'):
+                    blocks_widget.set_spine_config(self.spine_type, self.spine_direction)
+                    print(f"已更新 {controller_name} 的脊柱配置为: {self.spine_type}型{self.spine_direction}")
+                    
+                    # S型脊柱特殊处理：确保合并面板和独立面板有正确的参数
+                    if self.spine_type == "S" and controller_name == 'blue_curvature_combined':
+                        blocks_widget.spine_type = 'S'
+                        blocks_widget.spine_direction = self.spine_direction
+                        # 确保有完整的上下段参数
+                        if not hasattr(blocks_widget, 'blue_blocks_curvature_up'):
+                            blocks_widget.blue_blocks_curvature_up = 0.0
+                        if not hasattr(blocks_widget, 'blue_blocks_curvature_down'):
+                            blocks_widget.blue_blocks_curvature_down = 0.0
+                        print(f"已为S型合并面板{controller_name}模块设置完整参数")
+                    elif self.spine_type == "S" and controller_name in ['blue_curvature_up', 'blue_curvature_down']:
+                        blocks_widget.spine_type = 'S'
+                        blocks_widget.spine_direction = self.spine_direction
+                        # 确保有完整的上下段参数
+                        if not hasattr(blocks_widget, 'blue_blocks_curvature_up'):
+                            blocks_widget.blue_blocks_curvature_up = 0.0
+                        if not hasattr(blocks_widget, 'blue_blocks_curvature_down'):
+                            blocks_widget.blue_blocks_curvature_down = 0.0
+                        print(f"已为S型{controller_name}模块设置完整参数")
         
         # 可以在这里添加特定于脊柱配置的可视化调整逻辑
 
@@ -431,18 +454,37 @@ class PatientBlocksTab(QWidget):
         spine_config_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         spine_config_group.setMaximumHeight(140)
         
-        # 创建4个积木可视化模块的网格布局
+        # 创建积木可视化模块的网格布局（根据脊柱类型动态配置）
         from PyQt5.QtWidgets import QGridLayout
         grid_layout = QGridLayout()
         
-        # 创建4个积木可视化组件
+        # 创建积木可视化组件（根据脊柱类型动态配置）
         self.blocks_widgets = {}
-        module_configs = [
-            ('gray_rotation', '骨盆前后反转', 0, 0),
-            ('blue_curvature', '脊柱曲率矫正', 0, 1),
-            ('gray_tilt', '骨盆左右倾斜', 1, 0),
-            ('green_tilt', '肩部左右倾斜', 1, 1)
-        ]
+        
+        def _build_blocks_module_configs():
+            """根据脊柱类型构建积木可视化模块配置"""
+            if getattr(self, 'spine_type', 'C') == 'S':
+                # S型脊柱：4个模块（胸段和腰段合并为一个脊柱曲率矫正面板）
+                return [
+                    ('gray_rotation', '骨盆前后反转', 0, 0),
+                    ('blue_curvature_combined', '脊柱曲率矫正（胸段+腰段）', 0, 1),
+                    ('gray_tilt', '骨盆左右倾斜', 1, 0),
+                    ('green_tilt', '肩部左右倾斜', 1, 1)
+                ]
+            else:
+                # C型脊柱：4个模块
+                return [
+                    ('gray_rotation', '骨盆前后反转', 0, 0),
+                    ('blue_curvature', '脊柱曲率矫正', 0, 1),
+                    ('gray_tilt', '骨盆左右倾斜', 1, 0),
+                    ('green_tilt', '肩部左右倾斜', 1, 1)
+                ]
+        
+        module_configs = _build_blocks_module_configs()
+        
+        # 保存配置构建函数以供重建使用
+        self._build_blocks_module_configs = _build_blocks_module_configs
+        self.blocks_grid_layout = grid_layout
         
         for controller_name, display_name, row, col in module_configs:
             # 创建包装器，添加标题
@@ -469,6 +511,28 @@ class PatientBlocksTab(QWidget):
                 blocks_widget = BlocksVisualizer()
                 blocks_widget.setMinimumSize(200, 280)
                 blocks_widget.setMaximumSize(250, 320)
+                # 设置脊柱配置
+                blocks_widget.set_spine_config(self.spine_type, self.spine_direction)
+                
+                # S型脊柱合并面板特殊处理：为合并的胸腰段模块确保正确的配置
+                if self.spine_type == "S" and controller_name == 'blue_curvature_combined':
+                    # 确保S型脊柱的合并模块能正确显示S型曲线
+                    blocks_widget.spine_type = 'S'
+                    blocks_widget.spine_direction = self.spine_direction
+                    # 初始化上下段参数为0
+                    blocks_widget.blue_blocks_curvature_up = 0.0
+                    blocks_widget.blue_blocks_curvature_down = 0.0
+                    print(f"为重建的S型脊柱合并{controller_name}模块设置完整S型配置：方向={self.spine_direction}")
+                # S型脊柱特殊处理：为胸段和腰段模块确保正确的配置
+                elif self.spine_type == "S" and controller_name in ['blue_curvature_up', 'blue_curvature_down']:
+                    # 确保S型脊柱的胸段和腰段模块能正确显示S型曲线
+                    blocks_widget.spine_type = 'S'
+                    blocks_widget.spine_direction = self.spine_direction
+                    # 初始化上下段参数为0
+                    blocks_widget.blue_blocks_curvature_up = 0.0
+                    blocks_widget.blue_blocks_curvature_down = 0.0
+                    print(f"为重建的S型脊柱{controller_name}模块设置完整S型配置：方向={self.spine_direction}")
+                
             except Exception as e:
                 # 如果创建失败，显示占位符
                 blocks_widget = QLabel("积木可视化组件加载中...")
@@ -523,7 +587,7 @@ class PatientBlocksTab(QWidget):
         
         def _build_module_configs():
             if getattr(self, 'spine_type', 'C') == 'S':
-                # S型
+                # S型 - 使用合并的胸腰段面板，但保持独立的控制器
                 return [
                     ('gray_rotation', '骨盆前后反转', 0, 0),
                     ('blue_curvature_up', '脊柱曲率矫正·胸段', 0, 1),
@@ -994,10 +1058,25 @@ class PatientBlocksTab(QWidget):
             return
         
         try:
-            # 同时计算所有4个控制器的可视化参数
+            # 同时计算所有控制器的可视化参数
             for controller_name, controller in self.controllers.items():
                 value = controller.calculate_weighted_value()
                 self.visualizer_params[controller_name] = value
+            
+            # S型脊柱特殊处理：确保胸段和腰段参数都被计算和存储
+            if self.spine_type == "S":
+                # 确保S型的上下段参数都存在
+                if 'blue_curvature_up' not in self.visualizer_params:
+                    self.visualizer_params['blue_curvature_up'] = self.controllers['blue_curvature_up'].calculate_weighted_value()
+                if 'blue_curvature_down' not in self.visualizer_params:
+                    self.visualizer_params['blue_curvature_down'] = self.controllers['blue_curvature_down'].calculate_weighted_value()
+                
+                # 为兼容性设置合成的blue_curvature值（使用两段的最大值）
+                up_value = self.visualizer_params.get('blue_curvature_up', 0)
+                down_value = self.visualizer_params.get('blue_curvature_down', 0)
+                self.visualizer_params['blue_curvature'] = max(up_value, down_value)
+                
+                # print(f"S型脊柱参数更新: up={up_value:.3f}, down={down_value:.3f}, combined={self.visualizer_params['blue_curvature']:.3f}")
             
             # 更新积木显示
             self._update_blocks_visualization_new_method()
@@ -1048,6 +1127,33 @@ class PatientBlocksTab(QWidget):
                     if controller_name in self.visualizer_params:
                         params[controller_name] = self.visualizer_params[controller_name]
                     
+                    # S型脊柱特殊处理：合并面板和独立面板的处理
+                    if self.spine_type == "S" and controller_name == 'blue_curvature_combined':
+                        # 为S型脊柱的合并模块传递完整的上下段参数
+                        up_value = self.visualizer_params.get('blue_curvature_up', 0)
+                        down_value = self.visualizer_params.get('blue_curvature_down', 0)
+                        # 合并模块显示完整的S型脊柱，包含上下两段的曲率
+                        params['blue_curvature_up'] = up_value
+                        params['blue_curvature_down'] = down_value
+                        # 为兼容性也设置合成值
+                        params['blue_curvature'] = max(up_value, down_value)
+                    elif self.spine_type == "S" and controller_name in ['blue_curvature_up', 'blue_curvature_down']:
+                        # 为S型脊柱的胸段和腰段模块传递完整的上下段参数
+                        up_value = self.visualizer_params.get('blue_curvature_up', 0)
+                        down_value = self.visualizer_params.get('blue_curvature_down', 0)
+                        # 两个模块都显示完整的S型脊柱，包含上下两段的曲率
+                        params['blue_curvature_up'] = up_value
+                        params['blue_curvature_down'] = down_value
+                        # 为兼容性也设置合成值
+                        params['blue_curvature'] = max(up_value, down_value)
+                    elif controller_name == 'blue_curvature' and self.spine_type == "S":
+                        # 为C型兼容显示，使用两个参数的平均值或最大值
+                        up_value = self.visualizer_params.get('blue_curvature_up', 0)
+                        down_value = self.visualizer_params.get('blue_curvature_down', 0)
+                        params['blue_curvature'] = max(up_value, down_value)  # 使用最大值作为整体效果
+                        params['blue_curvature_up'] = up_value
+                        params['blue_curvature_down'] = down_value
+                    
                     # 更新积木显示
                     blocks_widget.update_visualization(
                         gray_rotation=params['gray_rotation'],
@@ -1064,11 +1170,45 @@ class PatientBlocksTab(QWidget):
                         if controller_name == 'gray_rotation':
                             setattr(blocks_widget, 'gray_block_rotation', float(value))
                         elif controller_name == 'blue_curvature':
-                            setattr(blocks_widget, 'blue_blocks_curvature', float(value))
+                            # C型：直接设置单一曲率
+                            if self.spine_type == "C":
+                                setattr(blocks_widget, 'blue_blocks_curvature', float(value))
+                            else:
+                                # S型：为兼容性设置单一值（使用两段的最大值）
+                                up_value = self.visualizer_params.get('blue_curvature_up', 0)
+                                down_value = self.visualizer_params.get('blue_curvature_down', 0)
+                                setattr(blocks_widget, 'blue_blocks_curvature', float(max(up_value, down_value)))
+                                setattr(blocks_widget, 'blue_blocks_curvature_up', float(up_value))
+                                setattr(blocks_widget, 'blue_blocks_curvature_down', float(down_value))
+                        elif controller_name == 'blue_curvature_combined':
+                            # S型合并面板：设置完整的S型脊柱参数
+                            up_value = self.visualizer_params.get('blue_curvature_up', 0)
+                            down_value = self.visualizer_params.get('blue_curvature_down', 0)
+                            setattr(blocks_widget, 'blue_blocks_curvature_up', float(up_value))
+                            setattr(blocks_widget, 'blue_blocks_curvature_down', float(down_value))
+                            # 为兼容性也设置合成值
+                            setattr(blocks_widget, 'blue_blocks_curvature', float(max(up_value, down_value)))
+                            # 为S型设置脊柱类型
+                            setattr(blocks_widget, 'spine_type', 'S')
+                            setattr(blocks_widget, 'spine_direction', self.spine_direction)
                         elif controller_name == 'blue_curvature_up':
+                            # S型胸段：设置完整的S型脊柱参数
                             setattr(blocks_widget, 'blue_blocks_curvature_up', float(value))
+                            # 同时设置腰段参数以显示完整S型
+                            down_value = self.visualizer_params.get('blue_curvature_down', 0)
+                            setattr(blocks_widget, 'blue_blocks_curvature_down', float(down_value))
+                            # 为S型设置脊柱类型
+                            setattr(blocks_widget, 'spine_type', 'S')
+                            setattr(blocks_widget, 'spine_direction', self.spine_direction)
                         elif controller_name == 'blue_curvature_down':
+                            # S型腰段：设置完整的S型脊柱参数
                             setattr(blocks_widget, 'blue_blocks_curvature_down', float(value))
+                            # 同时设置胸段参数以显示完整S型
+                            up_value = self.visualizer_params.get('blue_curvature_up', 0)
+                            setattr(blocks_widget, 'blue_blocks_curvature_up', float(up_value))
+                            # 为S型设置脊柱类型
+                            setattr(blocks_widget, 'spine_type', 'S')
+                            setattr(blocks_widget, 'spine_direction', self.spine_direction)
                         elif controller_name == 'gray_tilt':
                             # 归一化转角度
                             setattr(blocks_widget, 'gray_block_tilt', float(value) * 30.0)
@@ -1399,61 +1539,19 @@ class PatientBlocksTab(QWidget):
                 
                 # 为有权重的传感器显示详细信息
                 for sensor_idx, weight in active_sensors:
-                    status[name][f'sensor{sensor_idx+1}'] = {
-                        'weight': weight,
-                        'original': controller.original_values[sensor_idx],
-                        'target': controller.target_values[sensor_idx],
-                        'current': controller.current_values[sensor_idx],
-                        'target_range': (
-                            controller.target_values[sensor_idx] * (1 - controller.error_range),
-                            controller.target_values[sensor_idx] * (1 + controller.error_range)
-                        )
-                    }
-            return status
-        
-    def print_controller_status(self):
-            """打印控制器状态（用于调试）"""
-            print(f"\n=== 患者端控制器状态（详细）- 阶段{self.current_stage}" + 
-                  (f"-{self.current_sub_stage}" if self.current_sub_stage else "") + " ===")
-            status = self.get_controller_status()
-            
-            # 根据当前阶段只显示相关的控制器
-            relevant_controllers = []
-            if self.current_stage == 1:
-                relevant_controllers = ['gray_rotation']
-            elif self.current_stage == 2:
-                relevant_controllers = ['blue_curvature']
-            elif self.current_stage == 3:
-                if self.current_sub_stage == 'hip':
-                    relevant_controllers = ['gray_tilt']
-                elif self.current_sub_stage == 'shoulder':
-                    relevant_controllers = ['green_tilt']
-                else:
-                    relevant_controllers = ['gray_tilt', 'green_tilt']
-            
-            for name in relevant_controllers:
-                if name in status:
-                    ctrl_status = status[name]
-                    print(f"\n{name}:")
-                    print(f"  加权值: {ctrl_status['weighted_value']:.3f}")
-                    print(f"  目标达成: {ctrl_status['in_target_range']}")
-                    print(f"  误差范围: ±{ctrl_status['error_range']*100:.1f}%")
-                    print(f"  激活的传感器:")
-                    
-                    for sensor_idx, weight in ctrl_status['active_sensors']:
-                        sensor_key = f'sensor{sensor_idx+1}'
-                        if sensor_key in ctrl_status:
-                            sensor_info = ctrl_status[sensor_key]
-                            target_range = sensor_info['target_range']
-                            current = sensor_info['current']
-                            in_range = target_range[0] <= current <= target_range[1]
-                            
-                            print(f"    传感器{sensor_idx+1} (权重{weight}):")
-                            print(f"      原始值: {sensor_info['original']}")
-                            print(f"      目标值: {sensor_info['target']}")
-                            print(f"      当前值: {current}")
-                            print(f"      目标范围: {target_range[0]:.1f} - {target_range[1]:.1f}")
-                            print(f"      在范围内: {'是' if in_range else '否'}")
+                    sensor_key = f'sensor{sensor_idx+1}'
+                    if sensor_key in ctrl_status:
+                        sensor_info = ctrl_status[sensor_key]
+                        target_range = sensor_info['target_range']
+                        current = sensor_info['current']
+                        in_range = target_range[0] <= current <= target_range[1]
+                        
+                        print(f"    传感器{sensor_idx+1} (权重{weight}):")
+                        print(f"      原始值: {sensor_info['original']}")
+                        print(f"      目标值: {sensor_info['target']}")
+                        print(f"      当前值: {current}")
+                        print(f"      目标范围: {target_range[0]:.1f} - {target_range[1]:.1f}")
+                        print(f"      在范围内: {'是' if in_range else '否'}")
             print("=" * 50)
     
         # ================================================================
@@ -1551,6 +1649,53 @@ class PatientBlocksTab(QWidget):
             """检查是否为C型脊柱"""
             return self.spine_type == "C"
     
+    def update_spine_type(self, spine_type):
+        """由主窗口调用，更新脊柱类型"""
+        print(f"PatientBlocksTab: 更新脊柱类型为 {spine_type}")
+        self.spine_type = str(spine_type).upper() if spine_type else "C"
+        self.max_stages = self.stage_configs[self.spine_type]['max_stages']
+        
+        # 更新UI状态
+        if self.spine_type == "C":
+            self.c_type_radio.setChecked(True)
+            self.c_direction_widget.show()
+            self.s_direction_widget.hide()
+        else:
+            self.s_type_radio.setChecked(True)
+            self.c_direction_widget.hide()
+            self.s_direction_widget.show()
+        
+        # 更新控制器配置和可视化
+        self._update_controller_configs_for_spine_type()
+        self._update_visualizer_for_spine_config()
+        
+        # 重建训练模块
+        try:
+            self._rebuild_training_modules()
+            self._rebuild_blocks_modules()
+        except Exception as e:
+            print(f"PatientBlocksTab: 重建训练模块失败: {e}")
+    
+    def update_spine_direction(self, spine_direction):
+        """由主窗口调用，更新脊柱方向"""
+        print(f"PatientBlocksTab: 更新脊柱方向为 {spine_direction}")
+        self.spine_direction = spine_direction
+        
+        # 更新UI状态
+        if self.spine_type == "C":
+            if spine_direction == "left":
+                self.c_left_radio.setChecked(True)
+            else:
+                self.c_right_radio.setChecked(True)
+        else:
+            if spine_direction == "lumbar_left":
+                self.s_lumbar_left_radio.setChecked(True)
+            else:
+                self.s_lumbar_right_radio.setChecked(True)
+        
+        # 更新可视化
+        self._update_visualizer_for_spine_config()
+    
     def _rebuild_training_modules(self):
         """根据 C/S 类型重建患者端训练卡片"""
         if not hasattr(self, 'training_grid_layout'):
@@ -1585,6 +1730,122 @@ class PatientBlocksTab(QWidget):
             self.training_modules[key] = card
             self.training_grid_layout.addWidget(card, row, col)
 
+    def _rebuild_blocks_modules(self):
+        """根据 C/S 类型重建左侧积木可视化模块"""
+        if not hasattr(self, 'blocks_grid_layout'):
+            return
+        
+        print(f"开始重建积木可视化模块，脊柱类型: {self.spine_type}")
+        
+        # 清空现有积木模块
+        try:
+            for i in reversed(range(self.blocks_grid_layout.count())):
+                item = self.blocks_grid_layout.itemAt(i)
+                w = item.widget() if item else None
+                if w: w.setParent(None)
+        except Exception as e:
+            print(f"清空积木模块失败: {e}")
+        
+        # 清空积木组件字典
+        self.blocks_widgets = {}
+        
+        # 重新构建积木模块配置
+        if hasattr(self, '_build_blocks_module_configs'):
+            module_configs = self._build_blocks_module_configs()
+        else:
+            # 默认配置
+            if getattr(self, 'spine_type', 'C') == 'S':
+                module_configs = [
+                    ('gray_rotation', '骨盆前后反转', 0, 0),
+                    ('blue_curvature_combined', '脊柱曲率矫正（胸段+腰段）', 0, 1),
+                    ('gray_tilt', '骨盆左右倾斜', 1, 0),
+                    ('green_tilt', '肩部左右倾斜', 1, 1)
+                ]
+            else:
+                module_configs = [
+                    ('gray_rotation', '骨盆前后反转', 0, 0),
+                    ('blue_curvature', '脊柱曲率矫正', 0, 1),
+                    ('gray_tilt', '骨盆左右倾斜', 1, 0),
+                    ('green_tilt', '肩部左右倾斜', 1, 1)
+                ]
+        
+        # 重新创建积木模块
+        for controller_name, display_name, row, col in module_configs:
+            # 创建包装器，添加标题
+            wrapper_widget = QWidget()
+            wrapper_layout = QVBoxLayout()
+            
+            # 添加标题
+            title_label = QLabel(display_name)
+            title_label.setFont(QFont("Arial", 10, QFont.Bold))
+            title_label.setAlignment(Qt.AlignCenter)
+            title_label.setStyleSheet("""
+                QLabel {
+                    color: #2196F3;
+                    padding: 5px;
+                    border: 1px solid #2196F3;
+                    border-radius: 3px;
+                    background-color: #E3F2FD;
+                    margin-bottom: 5px;
+                }
+            """)
+            
+            # 创建单个积木可视化组件
+            try:
+                blocks_widget = BlocksVisualizer()
+                blocks_widget.setMinimumSize(200, 280)
+                blocks_widget.setMaximumSize(250, 320)
+                # 设置脊柱配置
+                blocks_widget.set_spine_config(self.spine_type, self.spine_direction)
+                
+                # S型脊柱合并面板特殊处理：为合并的胸腰段模块确保正确的配置
+                if self.spine_type == "S" and controller_name == 'blue_curvature_combined':
+                    # 确保S型脊柱的合并模块能正确显示S型曲线
+                    blocks_widget.spine_type = 'S'
+                    blocks_widget.spine_direction = self.spine_direction
+                    # 初始化上下段参数为0
+                    blocks_widget.blue_blocks_curvature_up = 0.0
+                    blocks_widget.blue_blocks_curvature_down = 0.0
+                    print(f"为重建的S型脊柱合并{controller_name}模块设置完整S型配置：方向={self.spine_direction}")
+                # S型脊柱特殊处理：为胸段和腰段模块确保正确的配置
+                elif self.spine_type == "S" and controller_name in ['blue_curvature_up', 'blue_curvature_down']:
+                    # 确保S型脊柱的胸段和腰段模块能正确显示S型曲线
+                    blocks_widget.spine_type = 'S'
+                    blocks_widget.spine_direction = self.spine_direction
+                    # 初始化上下段参数为0
+                    blocks_widget.blue_blocks_curvature_up = 0.0
+                    blocks_widget.blue_blocks_curvature_down = 0.0
+                    print(f"为重建的S型脊柱{controller_name}模块设置完整S型配置：方向={self.spine_direction}")
+                
+            except Exception as e:
+                # 如果创建失败，显示占位符
+                blocks_widget = QLabel("积木可视化组件加载中...")
+                blocks_widget.setAlignment(Qt.AlignCenter)
+                blocks_widget.setStyleSheet("background-color: #f0f0f0; border: 1px solid #ccc;")
+                blocks_widget.setMinimumSize(200, 280)
+                blocks_widget.setMaximumSize(250, 320)
+                print(f"重建积木可视化组件创建失败: {e}")
+            
+            wrapper_layout.addWidget(title_label)
+            wrapper_layout.addWidget(blocks_widget)
+            wrapper_layout.setContentsMargins(5, 5, 5, 5)
+            wrapper_widget.setLayout(wrapper_layout)
+            
+            # 设置边框样式
+            wrapper_widget.setStyleSheet("""
+                QWidget {
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                    background-color: white;
+                    margin: 2px;
+                }
+            """)
+            
+            self.blocks_widgets[controller_name] = blocks_widget
+            self.blocks_grid_layout.addWidget(wrapper_widget, row, col)
+        
+        print(f"积木可视化模块重建完成，共重建了 {len(self.blocks_widgets)} 个模块")
+
     def _all_controller_keys(self):
         return (['gray_rotation','blue_curvature_up','blue_curvature_down','gray_tilt','green_tilt']
                 if getattr(self,'spine_type','C') == 'S'
@@ -1596,10 +1857,9 @@ class PatientBlocksTab(QWidget):
             # S型脊柱 - 使用新的标志符映射
             stage_controller_map = {
                 1: 'gray_rotation',      # pelvis_rotation
-                2: 'blue_curvature_up',  # spine_curvature_upper (胸段)
-                3: 'blue_curvature_down', # spine_curvature_lower (腰段)
-                4: 'gray_tilt',          # pelvis_tilt
-                5: 'green_tilt'          # shoulder_tilt
+                2: 'blue_curvature_up',  # spine_curvature_upper (阶段2包含胸段+腰段，但优先胸段)
+                3: 'gray_tilt',          # pelvis_tilt
+                4: 'green_tilt'          # shoulder_tilt
             }
         else:
             # C型脊柱 - 使用新的标志符映射
@@ -1618,10 +1878,9 @@ class PatientBlocksTab(QWidget):
             # S型脊柱标志符映射
             stage_identifier_map = {
                 1: 'pelvis_rotation',
-                2: 'spine_curvature_upper',
-                3: 'spine_curvature_lower',
-                4: 'pelvis_tilt',
-                5: 'shoulder_tilt'
+                2: 'spine_curvature_upper',  # 阶段2包含胸段+腰段
+                3: 'pelvis_tilt',
+                4: 'shoulder_tilt'
             }
         else:
             # C型脊柱标志符映射

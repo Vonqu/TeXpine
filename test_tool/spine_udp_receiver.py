@@ -4,15 +4,30 @@
 脊柱监测系统UDP数据接收器
 ========================
 
-接收并显示脊柱监测系统发送的四个阶段数据：
+自动识别脊柱类型并接收相应数量的阶段控制器数据：
+
+C型脊柱 (4个控制器)：
 1. 阶段1：骨盆前后翻转 (gray_rotation)
 2. 阶段2：脊柱曲率矫正 (blue_curvature)  
 3. 阶段3：骨盆左右倾斜 (gray_tilt)
-4. 阶段3：肩部左右倾斜 (green_tilt)
+4. 阶段4：肩部左右倾斜 (green_tilt)
+
+S型脊柱 (5个控制器)：
+1. 阶段1：骨盆前后翻转 (gray_rotation)
+2. 阶段2A：脊柱曲率矫正·胸段 (blue_curvature_up)
+3. 阶段2B：脊柱曲率矫正·腰段 (blue_curvature_down)
+4. 阶段3：骨盆左右倾斜 (gray_tilt)
+5. 阶段4：肩部左右倾斜 (green_tilt)
 
 每个阶段包含：
-- 加权归一化值 (0-1)
+- 加权归一化值 (0-1范围，自动验证)
 - 误差范围值 (error_range)
+
+新增功能：
+- 自动识别脊柱类型 (C型/S型)
+- 数据范围验证 (0-1)
+- 控制器数量验证
+- 实时状态评估 (理想/良好/边缘/超范围)
 
 使用方法:
 python spine_udp_receiver.py --verbose
@@ -37,13 +52,40 @@ class SpineDataReceiver:
         self.start_time = None
         self.last_status_time = 0
         
-        # 阶段名称映射
-        self.stage_names = {
+        # C型脊柱阶段名称映射（4个控制器）
+        self.c_stage_names = {
             'gray_rotation': '阶段1-骨盆前后翻转',
-            'blue_curvature': '阶段2-脊柱曲率矫正',
+            'blue_curvature': '阶段2-脊柱曲率矫正', 
             'gray_tilt': '阶段3-骨盆左右倾斜',
-            'green_tilt': '阶段3-肩部左右倾斜'
+            'green_tilt': '阶段4-肩部左右倾斜'
         }
+        
+        # S型脊柱阶段名称映射（5个控制器）
+        self.s_stage_names = {
+            'gray_rotation': '阶段1-骨盆前后翻转',
+            'blue_curvature_up': '阶段2A-脊柱曲率矫正·胸段',
+            'blue_curvature_down': '阶段2B-脊柱曲率矫正·腰段',
+            'gray_tilt': '阶段3-骨盆左右倾斜', 
+            'green_tilt': '阶段4-肩部左右倾斜'
+        }
+        
+        # 通用映射（兼容旧版本）
+        self.stage_names = self.c_stage_names
+    
+    def _validate_stage_value(self, value):
+        """验证阶段值是否在0-1范围内"""
+        if not isinstance(value, (int, float)):
+            return "❌无效"
+        
+        if 0.0 <= value <= 1.0:
+            if 0.4 <= value <= 0.6:
+                return "🟢理想"
+            elif 0.2 <= value <= 0.8:
+                return "🟡良好"
+            else:
+                return "🟠边缘"
+        else:
+            return "❌超范围"
     
     def initialize_socket(self):
         """初始化UDP socket进行监听"""
@@ -114,47 +156,49 @@ class SpineDataReceiver:
             timestamp = json_data.get('timestamp', 'N/A')
             sensor_count = json_data.get('sensor_count', 'N/A')
             events_file_loaded = json_data.get('events_file_loaded', False)
+            spine_type = json_data.get('spine_type', 'C')  # 获取脊柱类型，默认C型
+            spine_direction = json_data.get('spine_direction', 'left')  # 获取脊柱方向
             
             print(f"时间戳: {timestamp}")
             print(f"传感器数量: {sensor_count}")
+            print(f"脊柱类型: {spine_type}型")
+            print(f"脊柱方向: {spine_direction}")
             print(f"事件文件加载: {'是' if events_file_loaded else '否'}")
             
-            # 显示四个阶段的核心数据
+            # 根据脊柱类型选择相应的阶段映射和处理逻辑
             stage_values = json_data.get('stage_values', {})
             stage_error_ranges = json_data.get('stage_error_ranges', {})
             
-            # print(f"\n{'阶段':<25} {'加权归一化值':<15} {'误差范围':<10} {'状态评估'}")
-            print(f"\n{'阶段':<25} {'加权归一化值':<15} {'误差范围':<10}")
-            print("-" * 70)
+            # 选择正确的阶段名称映射
+            current_stage_names = self.s_stage_names if spine_type == 'S' else self.c_stage_names
             
-            for stage_code, stage_name in self.stage_names.items():
+            # 验证接收到的控制器数量是否符合脊柱类型
+            expected_controllers = 5 if spine_type == 'S' else 4
+            actual_controllers = len([k for k in stage_values.keys() if k in current_stage_names])
+            
+            print(f"控制器参数: 期望{expected_controllers}个，实际接收{actual_controllers}个")
+            
+            # 显示阶段数据
+            print(f"\n{'阶段':<30} {'加权归一化值':<15} {'误差范围':<10} {'数据验证'}")
+            print("-" * 75)
+            
+            for stage_code, stage_name in current_stage_names.items():
                 value = stage_values.get(stage_code, 'N/A')
                 error_range = stage_error_ranges.get(stage_code, 'N/A')
                 
-                # # 状态评估
-                # if isinstance(value, (int, float)):
-                #     if 0.4 <= value <= 0.6:
-                #         status = "理想"
-                #         status_color = "🟢"
-                #     elif 0.2 <= value <= 0.8:
-                #         status = "良好"
-                #         status_color = "🟡"
-                #     else:
-                #         status = "需调整"
-                #         status_color = "🔴"
-                #     value_str = f"{value:.3f}"
-                # else:
-                #     status = "未知"
-                #     status_color = "⚪"
-                #     value_str = str(value)
+                # 数据验证
+                validation_status = self._validate_stage_value(value)
                 
+                if isinstance(value, (int, float)):
+                    value_str = f"{value:.3f}"
+                else:
+                    value_str = str(value)
+                    
                 error_str = f"{error_range:.3f}" if isinstance(error_range, (int, float)) else str(error_range)
                 
-                # print(f"{stage_name:<25} {value_str:<15} {error_str:<10} {status_color} {status}")
-                value_str = f"{value:.3f}"
-                print(f"{stage_name:<25} {value_str:<15} {error_str:<10}")
+                print(f"{stage_name:<30} {value_str:<15} {error_str:<10} {validation_status}")
             
-            print("-" * 70)
+            print("-" * 75)
             
             # 详细数据显示（仅在verbose模式下）
             if self.verbose:
@@ -166,14 +210,37 @@ class SpineDataReceiver:
                         print(f"  (还有 {len(sensor_data) - 8} 个传感器值未显示)")
                 
                 print(f"\n阶段详细信息:")
-                for stage_code, stage_name in self.stage_names.items():
+                for stage_code, stage_name in current_stage_names.items():
                     value = stage_values.get(stage_code, 'N/A')
                     error_range = stage_error_ranges.get(stage_code, 'N/A')
                     print(f"  {stage_name}:")
+                    print(f"    控制器代码: {stage_code}")
                     print(f"    加权归一化值: {value}")
                     print(f"    误差范围: {error_range}")
-                    
-                    # 如果有详细的计算信息，可以在这里显示
+                    if isinstance(value, (int, float)):
+                        print(f"    数据验证: {self._validate_stage_value(value)}")
+                    print()
+                
+                # 显示脊柱曲率参数（根据脊柱类型显示不同格式）
+                if spine_type == "S":
+                    # S型脊柱：显示两个曲率值
+                    spine_curve_up = json_data.get('spine_curve_up', 'N/A')
+                    spine_curve_down = json_data.get('spine_curve_down', 'N/A')
+                    print(f"脊柱曲率参数 (胸段): {spine_curve_up}")
+                    print(f"脊柱曲率参数 (腰段): {spine_curve_down}")
+                    if isinstance(spine_curve_up, (int, float)):
+                        curve_up_validation = self._validate_stage_value(spine_curve_up)
+                        print(f"胸段曲率验证: {curve_up_validation}")
+                    if isinstance(spine_curve_down, (int, float)):
+                        curve_down_validation = self._validate_stage_value(spine_curve_down)
+                        print(f"腰段曲率验证: {curve_down_validation}")
+                else:
+                    # C型脊柱：显示单个曲率值
+                    spine_curve = json_data.get('spine_curve', 'N/A')
+                    print(f"脊柱曲率参数: {spine_curve}")
+                    if isinstance(spine_curve, (int, float)):
+                        curve_validation = self._validate_stage_value(spine_curve)
+                        print(f"曲率参数验证: {curve_validation}")
                     
             print("=" * 80)
             
@@ -212,11 +279,19 @@ def main():
     print(f"详细模式: {'开启' if args.verbose else '关闭'}")
     print(f"缓冲区大小: {args.buffer} 字节")
     print("=" * 50)
-    print("\n期待接收以下8个核心数据值:")
-    print("1. 阶段1-骨盆前后翻转: 加权归一化值 + 误差范围")
-    print("2. 阶段2-脊柱曲率矫正: 加权归一化值 + 误差范围")
-    print("3. 阶段3-骨盆左右倾斜: 加权归一化值 + 误差范围")
-    print("4. 阶段3-肩部左右倾斜: 加权归一化值 + 误差范围")
+    print("\n支持的脊柱类型和控制器参数:")
+    print("\nC型脊柱 (4个控制器):")
+    print("  1. gray_rotation: 阶段1-骨盆前后翻转")
+    print("  2. blue_curvature: 阶段2-脊柱曲率矫正")
+    print("  3. gray_tilt: 阶段3-骨盆左右倾斜")
+    print("  4. green_tilt: 阶段4-肩部左右倾斜")
+    print("\nS型脊柱 (5个控制器):")
+    print("  1. gray_rotation: 阶段1-骨盆前后翻转")
+    print("  2. blue_curvature_up: 阶段2A-脊柱曲率矫正·胸段")
+    print("  3. blue_curvature_down: 阶段2B-脊柱曲率矫正·腰段")
+    print("  4. gray_tilt: 阶段3-骨盆左右倾斜")
+    print("  5. green_tilt: 阶段4-肩部左右倾斜")
+    print("\n每个控制器包含: 加权归一化值(0-1) + 误差范围")
     print("=" * 50)
     
     receiver = SpineDataReceiver(

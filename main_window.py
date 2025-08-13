@@ -158,7 +158,7 @@ class SpineDataSender:
                 ("阶段2", "开始矫正"): ('blue_curvature', 'original'),
                 ("阶段2", "矫正完成"): ('blue_curvature', 'target'),
 
-                # 阶段2（S型分段，仅保留标准写法）
+                # 阶段2（S型分段，标准写法）
                 ("阶段2A", "开始矫正(胸段)"): ('blue_curvature_up', 'original'),
                 ("阶段2A", "矫正完成(胸段)"): ('blue_curvature_up', 'target'),
                 ("阶段2B", "开始矫正(腰段)"): ('blue_curvature_down', 'original'),
@@ -296,7 +296,9 @@ class SpineDataSender:
                 # "training_indicators": training_indicators,  # 新增6个归一化参数
                 "spine_curve": spine_curve,  # 新增spine_curve字段
                 "sensor_count": len(sensor_data),
-                "events_file_loaded": self.events_file_loaded
+                "events_file_loaded": self.events_file_loaded,
+                "spine_type": self.spine_type,  # 添加脊柱类型标识
+                "spine_direction": self.spine_direction  # 添加脊柱方向标识
             }
             
             # 转换为JSON并发送
@@ -329,10 +331,25 @@ class SpineDataSender:
             return False
     
     def _calculate_all_stage_values(self, sensor_data):
-        """计算四个阶段的加权归一化值"""
+        """根据脊柱类型计算阶段的加权归一化值
+        
+        C型脊柱: 4个参数 (gray_rotation, blue_curvature, gray_tilt, green_tilt)
+        S型脊柱: 5个参数 (gray_rotation, blue_curvature_up, blue_curvature_down, gray_tilt, green_tilt)
+        """
         stage_values = {}
         
-        for stage_name, config in self.stage_configs.items():
+        if self.spine_type == "C":
+            # C型脊柱：4个控制器
+            stages_to_calculate = ['gray_rotation', 'blue_curvature', 'gray_tilt', 'green_tilt']
+        elif self.spine_type == "S":
+            # S型脊柱：5个控制器
+            stages_to_calculate = ['gray_rotation', 'blue_curvature_up', 'blue_curvature_down', 'gray_tilt', 'green_tilt']
+        else:
+            # 默认使用C型配置
+            stages_to_calculate = ['gray_rotation', 'blue_curvature', 'gray_tilt', 'green_tilt']
+        
+        for stage_name in stages_to_calculate:
+            config = self.stage_configs.get(stage_name, {})
             stage_values[stage_name] = self._calculate_stage_weighted_value(sensor_data, config, stage_name)
         
         return stage_values
@@ -391,7 +408,11 @@ class SpineDataSender:
                 weighted_sum += normalized * weight
                 total_weight += weight
         
-        return weighted_sum / total_weight if total_weight > 0 else 0.5
+        # 计算combined_value并限制到0-1范围
+        combined_value = weighted_sum / total_weight if total_weight > 0 else 0.5
+        combined_value = max(0.0, min(1.0, combined_value))  # 添加0-1范围限制
+        
+        return combined_value
     
     def _calculate_simple_weighted_value(self, sensor_data, weights, stage_name=None):
         """简化的加权归一化值计算（当没有事件文件时使用）"""
@@ -438,27 +459,31 @@ class SpineDataSender:
                         normalized = 0.5
                     weighted_sum += normalized * weight
                     total_weight += weight
-            return weighted_sum / total_weight if total_weight > 0 else 0.5
+            
+            # 计算combined_value并限制到0-1范围
+            combined_value = weighted_sum / total_weight if total_weight > 0 else 0.5
+            combined_value = max(0.0, min(1.0, combined_value))  # 添加0-1范围限制
+            
+            return combined_value
         except Exception as e:
             print(f"简化加权计算失败: {e}")
-            # 如果出错，使用默认的简化计算
-            total_weight = 0.0
-            weighted_sum = 0.0
-            for i, sensor_val in enumerate(sensor_data):
-                if i < len(weights) and float(weights[i]) != 0.0:
-                    weight = float(abs(weights[i]))
-                    # 简化的归一化：假设传感器值在2000-3000范围内
-                    normalized = (sensor_val - 2500.0) / 500.0 + 0.5
-                    normalized = max(0.0, min(1.0, normalized))
-                    weighted_sum += normalized * weight
-                    total_weight += weight
-            return weighted_sum / total_weight if total_weight > 0 else 0.5
+
     
     def _get_all_error_ranges(self):
-        """获取所有阶段的误差范围"""
+        """根据脊柱类型获取相应阶段的误差范围"""
+        if self.spine_type == "C":
+            # C型脊柱：4个控制器
+            stages_to_get = ['gray_rotation', 'blue_curvature', 'gray_tilt', 'green_tilt']
+        elif self.spine_type == "S":
+            # S型脊柱：5个控制器
+            stages_to_get = ['gray_rotation', 'blue_curvature_up', 'blue_curvature_down', 'gray_tilt', 'green_tilt']
+        else:
+            # 默认使用C型配置
+            stages_to_get = ['gray_rotation', 'blue_curvature', 'gray_tilt', 'green_tilt']
+        
         return {
-            stage_name: config.get('error_range', 0.1)
-            for stage_name, config in self.stage_configs.items()
+            stage_name: self.stage_configs.get(stage_name, {}).get('error_range', 0.1)
+            for stage_name in stages_to_get
         }
     
     
@@ -811,7 +836,6 @@ class SensorMonitorMainWindow(QMainWindow):
     
     def _init_ui(self):
         """初始化用户界面"""
-        # print("17. 开始创建UI布局...")
 
         # 创建中心部件
         central_widget = QWidget()
@@ -2375,28 +2399,76 @@ class SensorMonitorMainWindow(QMainWindow):
                     current_mode = self.control_panel.get_current_mode()
                     sensor_data = processed_data[1:]
                     if current_mode == "patient" and self.patient_blocks_tab:
-                        # 获取患者端的可视化参数
+                        # 获取患者端的可视化参数和脊柱类型
                         visualizer_params = self.patient_blocks_tab.visualizer_params
-                        # 发送数据包
-                        data_package = {
-                            "timestamp": time.time(),
-                            "sensor_data": sensor_data,
-                            "stage_values": {
-                                "gray_rotation": visualizer_params['gray_rotation'],
-                                "blue_curvature": visualizer_params['blue_curvature'],
-                                "gray_tilt": visualizer_params['gray_tilt'],
-                                "green_tilt": visualizer_params['green_tilt']
-                            },
-                            "stage_error_ranges": {
+                        patient_spine_type = getattr(self.patient_blocks_tab, 'spine_type', 'C')
+                        
+                        # 根据脊柱类型构造不同的stage_values和error_ranges
+                        if patient_spine_type == "S":
+                            # S型脊柱：5个控制器参数
+                            stage_values = {
+                                "gray_rotation": visualizer_params.get('gray_rotation', 0.5),
+                                "blue_curvature_up": visualizer_params.get('blue_curvature_up', 0.5),
+                                "blue_curvature_down": visualizer_params.get('blue_curvature_down', 0.5),
+                                "gray_tilt": visualizer_params.get('gray_tilt', 0.5),
+                                "green_tilt": visualizer_params.get('green_tilt', 0.5)
+                            }
+                            stage_error_ranges = {
+                                "gray_rotation": 0.1,
+                                "blue_curvature_up": 0.1,
+                                "blue_curvature_down": 0.1,
+                                "gray_tilt": 0.1,
+                                "green_tilt": 0.1
+                            }
+                            # S型脊柱：分别传递两段曲率值 | S-type spine: pass both curvature segments separately
+                            spine_curve_up = visualizer_params.get('blue_curvature_up', 0.5)
+                            spine_curve_down = visualizer_params.get('blue_curvature_down', 0.5)
+                        else:
+                            # C型脊柱：4个控制器参数
+                            stage_values = {
+                                "gray_rotation": visualizer_params.get('gray_rotation', 0.5),
+                                "blue_curvature": visualizer_params.get('blue_curvature', 0.5),
+                                "gray_tilt": visualizer_params.get('gray_tilt', 0.5),
+                                "green_tilt": visualizer_params.get('green_tilt', 0.5)
+                            }
+                            stage_error_ranges = {
                                 "gray_rotation": 0.1,
                                 "blue_curvature": 0.1,
                                 "gray_tilt": 0.1,
                                 "green_tilt": 0.1
-                            },
-                            "sensor_count": len(sensor_data),
-                            "events_file_loaded": True
-                        }
-                        # 转换为JSON并发送
+                            }
+                            # C型脊柱：单个曲率值 | C-type spine: single curvature value
+                            spine_curve = visualizer_params.get('blue_curvature', 0.5)
+                        
+                        # 发送数据包 | Send data package
+                        if patient_spine_type == "S":
+                            # S型脊柱数据包：包含两个曲率值 | S-type spine data package: contains two curvature values
+                            data_package = {
+                                "timestamp": time.time(),  # 时间戳 | Timestamp
+                                "sensor_data": sensor_data,  # 传感器数据 | Sensor data
+                                "stage_values": stage_values,  # 阶段参数值 (S型5个) | Stage values (5 for S-type)
+                                "stage_error_ranges": stage_error_ranges,  # 阶段误差范围 | Stage error ranges
+                                "spine_curve_up": spine_curve_up,  # 胸段脊柱曲率值 | Upper spine curvature value
+                                "spine_curve_down": spine_curve_down,  # 腰段脊柱曲率值 | Lower spine curvature value
+                                "sensor_count": len(sensor_data),  # 传感器数量 | Sensor count
+                                "events_file_loaded": True,  # 事件文件加载状态 | Events file load status
+                                "spine_type": patient_spine_type,  # 脊柱类型 (S) | Spine type (S)
+                                "spine_direction": getattr(self.patient_blocks_tab, 'spine_direction', 'left')  # 脊柱方向 | Spine direction
+                            }
+                        else:
+                            # C型脊柱数据包：包含单个曲率值 | C-type spine data package: contains single curvature value
+                            data_package = {
+                                "timestamp": time.time(),  # 时间戳 | Timestamp
+                                "sensor_data": sensor_data,  # 传感器数据 | Sensor data
+                                "stage_values": stage_values,  # 阶段参数值 (C型4个) | Stage values (4 for C-type)
+                                "stage_error_ranges": stage_error_ranges,  # 阶段误差范围 | Stage error ranges
+                                "spine_curve": spine_curve,  # 脊柱曲率值 | Spine curvature value
+                                "sensor_count": len(sensor_data),  # 传感器数量 | Sensor count
+                                "events_file_loaded": True,  # 事件文件加载状态 | Events file load status
+                                "spine_type": patient_spine_type,  # 脊柱类型 (C) | Spine type (C)
+                                "spine_direction": getattr(self.patient_blocks_tab, 'spine_direction', 'left')  # 脊柱方向 | Spine direction
+                            }
+                        # 转换为JSON并发送 | Convert to JSON and send
                         json_data = json.dumps(data_package, cls=NumpyEncoder)
                         if self.spine_data_sender.socket:
                             self.spine_data_sender.socket.sendto(json_data.encode(), (self.spine_data_sender.host, self.spine_data_sender.port))

@@ -261,10 +261,13 @@ class BlocksTab(QWidget):
         events_layout = QVBoxLayout()
         events_layout.addWidget(QLabel("训练事件记录:"))
         
-        # 事件按钮容器
+        # 事件按钮容器 - 改为垂直布局
         self.event_buttons_widget = QWidget()
-        self.event_buttons_layout = QGridLayout()
+        self.event_buttons_layout = QVBoxLayout()
         self.event_buttons_widget.setLayout(self.event_buttons_layout)
+        
+        # 设置事件按钮容器的最大宽度，减小整体宽度
+        self.event_buttons_widget.setMaximumWidth(200)
         
         # 创建所有事件按钮
         self.event_buttons = {}
@@ -298,10 +301,11 @@ class BlocksTab(QWidget):
         self.event_buttons = {}
         # 如果还没有布局，创建一个
         if not hasattr(self, 'event_buttons_layout') or self.event_buttons_layout is None:
-            from PyQt5.QtWidgets import QGridLayout, QWidget
+            from PyQt5.QtWidgets import QVBoxLayout, QWidget
             self.event_buttons_widget = QWidget()
-            self.event_buttons_layout = QGridLayout()
+            self.event_buttons_layout = QVBoxLayout()
             self.event_buttons_widget.setLayout(self.event_buttons_layout)
+            self.event_buttons_widget.setMaximumWidth(200)
         # 首次构建
         try:
             self._rebuild_event_buttons()
@@ -316,7 +320,13 @@ class BlocksTab(QWidget):
                 for btn in stage_buttons:
                     btn.setParent(None)
         
+        # 清除现有阶段标签
+        if hasattr(self, 'stage_labels'):
+            for label in self.stage_labels.values():
+                label.setParent(None)
+        
         self.event_buttons = {}
+        self.stage_labels = {}
         
         # 根据脊柱类型定义按钮配置
         spine_type = getattr(self, 'spine_type', 'C')
@@ -343,25 +353,37 @@ class BlocksTab(QWidget):
                 4: [("开始沉肩", "shoulder_start"), ("沉肩完成", "shoulder_complete")]  # 阶段4：只有沉肩
             }
         
-        # 创建按钮
-        row = 0
+        # 创建按钮 - 垂直排列
+        self.stage_labels = {}  # 记录阶段标签
         for stage, buttons in button_configs.items():
             stage_buttons = []
-            col = 0
+            
+            # 为每个阶段添加标签
+            stage_label = QLabel(f"阶段 {stage}:")
+            stage_label.setStyleSheet("""
+                QLabel {
+                    font-weight: bold;
+                    color: #333;
+                    margin: 8px 0 4px 0;
+                    padding: 2px 0;
+                }
+            """)
+            self.event_buttons_layout.addWidget(stage_label)
+            self.stage_labels[stage] = stage_label  # 记录标签以便控制显示
             
             for button_text, button_code in buttons:
                 btn = QPushButton(button_text)
-                btn.setMinimumHeight(35)
+                btn.setMinimumHeight(30)
+                btn.setMaximumWidth(180)  # 限制按钮宽度
                 btn.setStyleSheet(self._get_button_style(button_code))
                 
                 # 连接点击事件
                 btn.clicked.connect(lambda checked, text=button_text, code=button_code: 
                                    self._handle_event_button_click(text, code))
                 
-                # 添加到布局
-                self.event_buttons_layout.addWidget(btn, row, col)
+                # 添加到垂直布局
+                self.event_buttons_layout.addWidget(btn)
                 stage_buttons.append(btn)
-                col += 1
                 
                 # 创建对应的按钮属性（为了兼容主窗口的连接逻辑）
                 if button_code == "hip_start":
@@ -374,7 +396,9 @@ class BlocksTab(QWidget):
                     self.end_shoulder_btn = btn
             
             self.event_buttons[stage] = stage_buttons
-            row += 1
+            
+            # 在阶段之间添加间距
+            self.event_buttons_layout.addSpacing(8)
     
     def _get_button_style(self, button_code):
         """获取按钮样式"""
@@ -567,15 +591,24 @@ class BlocksTab(QWidget):
     
     def _update_event_buttons_for_stage(self, stage):
         """根据当前阶段更新事件按钮显示"""
-        # 隐藏所有按钮
+        # 隐藏所有按钮和标签
         for stage_num, buttons in self.event_buttons.items():
             for btn in buttons:
                 btn.hide()
         
-        # 显示当前阶段的按钮
+        # 隐藏所有阶段标签
+        if hasattr(self, 'stage_labels'):
+            for stage_num, label in self.stage_labels.items():
+                label.hide()
+        
+        # 显示当前阶段的按钮和标签
         if stage in self.event_buttons:
             for btn in self.event_buttons[stage]:
                 btn.show()
+            
+            # 显示当前阶段的标签
+            if hasattr(self, 'stage_labels') and stage in self.stage_labels:
+                self.stage_labels[stage].show()
 
     # ================================================================
     # 内存优化的数据处理方法
@@ -1170,7 +1203,7 @@ class BlocksTab(QWidget):
             self.prev_btn.setEnabled(self.stage > 1)
             self.next_btn.setEnabled(self.stage < getattr(self, 'max_stages', 4))
         
-        # 动态阶段描述（C型4阶段，S型5阶段）
+        # 动态阶段描述（C型4阶段，S型4阶段）
         stage_descriptions = (
             {
                 1: "阶段1：骨盆前后翻转（只调整骨盆前后翻转）",
@@ -1179,10 +1212,9 @@ class BlocksTab(QWidget):
                 4: "阶段4：肩部左右倾斜（只调整肩部左右倾斜）",
             } if getattr(self, 'spine_type', 'C') != 'S' else {
                 1: "阶段1：骨盆前后翻转",
-                2: "阶段2A：上胸段曲率矫正",
-                3: "阶段2B：腰段曲率矫正",
-                4: "阶段3：骨盆左右倾斜",
-                5: "阶段4：肩部左右倾斜",
+                2: "阶段2：脊柱曲率矫正（胸段+腰段）",
+                3: "阶段3：骨盆左右倾斜",
+                4: "阶段4：肩部左右倾斜",
             }
         )
 
@@ -1319,7 +1351,7 @@ class BlocksTab(QWidget):
         print(f"BlocksTab: 更新脊柱类型为 {spine_type}")
         self.spine_type = str(spine_type).upper() if spine_type else "C"
         # C=4阶段, S=5阶段
-        self.max_stages = 4
+        self.max_stages = 4  # C型和S型都是4个阶段
         
         # 通知控制面板切换 C/S 显示
         try:

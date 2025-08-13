@@ -3,7 +3,7 @@ def format_stage_label(stage_key, spine_type=None):
 
     Rules:
     - For new stage identifiers: 'pelvis_rotation'->阶段1, 'spine_curvature_single'->阶段2, etc.
-    - For int stages: use '阶段{n}', except S-type where 2->2A and 3->2B
+    - For int stages: use '阶段{n}', except S-type where stage 2 needs special handling for sub-stages
     - For legacy str keys: '2a'->阶段2A, '2b'->阶段2B, '3a'/'3b'->阶段3
     - Fallback: prefix with '阶段'
     """
@@ -24,11 +24,25 @@ def format_stage_label(stage_key, spine_type=None):
         
         # Numeric stage with optional spine type context
         if isinstance(stage_key, int):
+            # S型脊柱有特殊的阶段映射规则
             if str(spine_type).upper() == 'S':
+                # S型脊柱的正确映射：
+                # 阶段1 -> 阶段1 (骨盆前后翻转)
+                # 阶段2 -> 阶段2A (胸段矫正) - 注意：这个映射可能需要额外上下文
+                # 阶段3 -> 阶段2B (腰段矫正) - 注意：这个映射可能需要额外上下文  
+                # 阶段4 -> 阶段3 (沉髋)
+                # 阶段5 -> 阶段4 (沉肩)
+                # 
+                # 但基于代码分析，实际的UI阶段编号与CSV记录的阶段标签不同
+                # UI中：阶段1,2,3,4,5 对应 CSV中：阶段1,阶段2A,阶段2B,阶段3,阶段4
                 if stage_key == 2:
                     return '阶段2A'
-                if stage_key == 3:
+                elif stage_key == 3:
                     return '阶段2B'
+                elif stage_key == 4:
+                    return '阶段3'
+                elif stage_key == 5:
+                    return '阶段4'
             return f'阶段{stage_key}'
 
         key_str = str(stage_key).strip()
